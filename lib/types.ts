@@ -1,7 +1,9 @@
 export type Role = "admin" | "cashier";
-export type Currency = "USD" | "SOS";
+// SSHL = Somaliland Shilling (legacy records may still contain "SOS")
+export type Currency = "USD" | "SSHL";
 export type PaymentMethod = "cash" | "mobile" | "card";
 export type ProductStatus = "active" | "inactive";
+export type SalePaymentStatus = "paid" | "unpaid";
 
 export interface User {
   id: number;
@@ -45,9 +47,10 @@ export interface Sale {
   customer_name?: string | null;
   cashier_id: number;
   cashier_name?: string;
-  currency: Currency;
+  currency: Currency | "SOS";
   exchange_rate: number;
   payment_method: PaymentMethod;
+  payment_status: SalePaymentStatus;
   total_usd: number;
   total_sos: number;
   discount: number;

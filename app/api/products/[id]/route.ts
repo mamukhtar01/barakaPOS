@@ -1,6 +1,7 @@
 import { db, initDb } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { NextRequest } from "next/server";
+import { isBase64ImageDataUrl } from "@/lib/validators";
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   await initDb();
@@ -21,11 +22,17 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   if (!session || session.role !== "admin") return Response.json({ error: "Forbidden" }, { status: 403 });
   const { id } = await params;
   const body = await request.json();
-  const { name, category_id, img, image_url, thumbnail_url, sale_price_usd, cost_price_usd, status } = body;
-  const productImage = img ?? image_url ?? null;
+  const { name, category_id, img, thumbnail_url, sale_price_usd, cost_price_usd, status } = body;
+  const productImage = img ?? null;
+  if (productImage && !isBase64ImageDataUrl(productImage)) {
+    return Response.json({ error: "Product image must be a base64 image data URL" }, { status: 400 });
+  }
+  if (thumbnail_url && !isBase64ImageDataUrl(thumbnail_url)) {
+    return Response.json({ error: "Product thumbnail must be a base64 image data URL" }, { status: 400 });
+  }
   const { rows } = await db.execute({
-    sql: "UPDATE products SET name=?, category_id=?, img=?, image_url=?, thumbnail_url=?, sale_price_usd=?, cost_price_usd=?, status=? WHERE id=? RETURNING *",
-    args: [name, category_id ?? null, productImage, productImage, thumbnail_url ?? null, Number(sale_price_usd), Number(cost_price_usd ?? 0), status ?? "active", Number(id)],
+    sql: "UPDATE products SET name=?, category_id=?, img=?, thumbnail_url=?, sale_price_usd=?, cost_price_usd=?, status=? WHERE id=? RETURNING *",
+    args: [name, category_id ?? null, productImage, thumbnail_url ?? null, Number(sale_price_usd), Number(cost_price_usd ?? 0), status ?? "active", Number(id)],
   });
   if (rows.length === 0) return Response.json({ error: "Not found" }, { status: 404 });
   return Response.json({ product: { id: rows[0].id } });

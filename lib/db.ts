@@ -49,6 +49,7 @@ export async function initDb() {
       currency TEXT NOT NULL DEFAULT 'USD',
       exchange_rate REAL NOT NULL DEFAULT 1,
       payment_method TEXT NOT NULL DEFAULT 'cash',
+      payment_status TEXT NOT NULL DEFAULT 'paid',
       total_usd REAL NOT NULL DEFAULT 0,
       total_sos REAL NOT NULL DEFAULT 0,
       discount REAL NOT NULL DEFAULT 0,
@@ -92,6 +93,14 @@ export async function initDb() {
   );
   if (!hasThumbnailColumn) {
     await db.execute("ALTER TABLE products ADD COLUMN thumbnail_url TEXT");
+  }
+
+  const saleColumns = await db.execute("PRAGMA table_info(sales)");
+  const hasPaymentStatusColumn = saleColumns.rows.some(
+    (col) => (col.name as string) === "payment_status"
+  );
+  if (!hasPaymentStatusColumn) {
+    await db.execute("ALTER TABLE sales ADD COLUMN payment_status TEXT NOT NULL DEFAULT 'paid'");
   }
 
   // Seed default admin if no users exist
