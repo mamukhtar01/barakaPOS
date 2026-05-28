@@ -3,12 +3,12 @@
 import { useState, useEffect, useCallback } from "react";
 import {
   Layout, Button, Input, Badge, Tag, Typography, Space, Divider, Empty,
-  Modal, Form, Select, InputNumber, Radio, message, Avatar, Tooltip,
-  Drawer, Card, Spin, Row, Col
+  Modal, Form, Select, InputNumber, Radio, App, Tooltip,
+  Drawer, Card, Spin, Row, Col, Image
 } from "antd";
 import {
   ShoppingCartOutlined, DeleteOutlined, PlusOutlined, MinusOutlined,
-  PrinterOutlined, UserOutlined, LogoutOutlined, SettingOutlined,
+  PrinterOutlined, LogoutOutlined, SettingOutlined,
   SearchOutlined, DollarOutlined, CloseOutlined, CheckOutlined,
   AppstoreOutlined
 } from "@ant-design/icons";
@@ -20,9 +20,9 @@ const { Header, Content, Sider } = Layout;
 const { Text, Title } = Typography;
 
 const CURRENCY_LABELS: Record<string, string> = { USD: "USD $", SOS: "SOS ش" };
-const PAYMENT_LABELS: Record<string, string> = { cash: "Cash", mobile: "Mobile Pay", card: "Card" };
 
 export default function POSPage() {
+  const { message } = App.useApp();
   const { user, logout } = useAuth();
   const router = useRouter();
 
@@ -81,8 +81,17 @@ export default function POSPage() {
     }
   }, []);
 
-  useEffect(() => { fetchCategories(); fetchSettings(); fetchCustomers(); }, [fetchCategories, fetchSettings, fetchCustomers]);
-  useEffect(() => { fetchProducts(); }, [fetchProducts]);
+  useEffect(() => {
+    void (async () => {
+      await Promise.all([fetchCategories(), fetchSettings(), fetchCustomers()]);
+    })();
+  }, [fetchCategories, fetchSettings, fetchCustomers]);
+
+  useEffect(() => {
+    void (async () => {
+      await fetchProducts();
+    })();
+  }, [fetchProducts]);
 
   const addToCart = (product: Product) => {
     setCart((prev) => {
@@ -99,7 +108,7 @@ export default function POSPage() {
           product_name: product.name,
           unit_price_usd: product.sale_price_usd,
           quantity: 1,
-          image_url: product.image_url,
+          image_url: product.img ?? product.image_url,
         },
       ];
     });
@@ -263,17 +272,23 @@ export default function POSPage() {
                       styles={{ body: { padding: "10px" } }}
                       onClick={() => addToCart(p)}
                     >
-                      {p.image_url ? (
-                        <img
-                          src={p.image_url}
+                      {(() => {
+                        const productImage = p.img ?? p.thumbnail_url ?? p.image_url;
+                        return productImage ? (
+                        <Image
+                          src={productImage}
                           alt={p.name}
+                          preview={false}
+                          width="100%"
+                          height={80}
                           className="w-full h-20 object-cover rounded mb-2"
                         />
-                      ) : (
+                        ) : (
                         <div className="w-full h-20 rounded mb-2 bg-green-50 flex items-center justify-center text-3xl">
                           🍽️
                         </div>
-                      )}
+                        );
+                      })()}
                       <Text strong className="block text-sm leading-tight truncate">{p.name}</Text>
                       {p.category_name && (
                         <Text type="secondary" className="text-xs block">{p.category_name}</Text>
@@ -300,7 +315,6 @@ export default function POSPage() {
             cartTotal={cartTotal}
             cartCount={cartCount}
             exchangeRate={exchangeRate}
-            selectedCurrency={selectedCurrency}
             displayPrice={displayPrice}
             updateQty={updateQty}
             removeItem={removeItem}
@@ -338,7 +352,6 @@ export default function POSPage() {
           cartTotal={cartTotal}
           cartCount={cartCount}
           exchangeRate={exchangeRate}
-          selectedCurrency={selectedCurrency}
           displayPrice={displayPrice}
           updateQty={updateQty}
           removeItem={removeItem}
@@ -449,13 +462,12 @@ export default function POSPage() {
 }
 
 function CartPanel({
-  cart, cartTotal, cartCount, selectedCurrency, displayPrice, updateQty, removeItem, clearCart, handleCheckout,
+  cart, cartTotal, cartCount, displayPrice, updateQty, removeItem, clearCart, handleCheckout,
 }: {
   cart: CartItem[];
   cartTotal: number;
   cartCount: number;
   exchangeRate: number;
-  selectedCurrency: "USD" | "SOS";
   displayPrice: (usd: number) => string;
   updateQty: (id: number, delta: number) => void;
   removeItem: (id: number) => void;

@@ -9,6 +9,7 @@ import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined } from "@ant
 import type { Product, Category } from "@/lib/types";
 
 const { Title } = Typography;
+const MAX_IMAGE_BYTES = 350 * 1024;
 
 function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -41,27 +42,41 @@ async function compressImageToBase64(file: File): Promise<string> {
     el.src = srcDataUrl;
   });
 
-  const maxDimension = 1200;
+  let targetWidth = img.width;
+  let targetHeight = img.height;
+  const maxDimension = 900;
   const scale = Math.min(1, maxDimension / Math.max(img.width, img.height));
-  const targetWidth = Math.max(1, Math.round(img.width * scale));
-  const targetHeight = Math.max(1, Math.round(img.height * scale));
+  targetWidth = Math.max(1, Math.round(img.width * scale));
+  targetHeight = Math.max(1, Math.round(img.height * scale));
 
   const canvas = document.createElement("canvas");
-  canvas.width = targetWidth;
-  canvas.height = targetHeight;
   const ctx = canvas.getContext("2d");
   if (!ctx) return srcDataUrl;
 
-  ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
+  let best = srcDataUrl;
+  const outputType = "image/jpeg";
 
-  const outputType = file.type === "image/png" ? "image/png" : "image/jpeg";
-  const quality = outputType === "image/jpeg" ? 0.8 : undefined;
-  const compressed = canvas.toDataURL(outputType, quality);
+  for (let pass = 0; pass < 4; pass += 1) {
+    canvas.width = targetWidth;
+    canvas.height = targetHeight;
+    ctx.clearRect(0, 0, targetWidth, targetHeight);
+    ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
 
-  if (dataUrlSizeInBytes(compressed) >= dataUrlSizeInBytes(srcDataUrl)) {
-    return srcDataUrl;
+    for (const quality of [0.82, 0.72, 0.62, 0.52, 0.42]) {
+      const candidate = canvas.toDataURL(outputType, quality);
+      if (dataUrlSizeInBytes(candidate) < dataUrlSizeInBytes(best)) {
+        best = candidate;
+      }
+      if (dataUrlSizeInBytes(candidate) <= MAX_IMAGE_BYTES) {
+        return candidate;
+      }
+    }
+
+    targetWidth = Math.max(1, Math.round(targetWidth * 0.82));
+    targetHeight = Math.max(1, Math.round(targetHeight * 0.82));
   }
-  return compressed;
+
+  return dataUrlSizeInBytes(best) < dataUrlSizeInBytes(srcDataUrl) ? best : srcDataUrl;
 }
 
 async function generateSquareThumbnail(base64Image: string, size = 120): Promise<string> {
@@ -100,7 +115,7 @@ export default function ProductsPage() {
   const [saving, setSaving] = useState(false);
   const [imageUploading, setImageUploading] = useState(false);
   const [generateThumb, setGenerateThumb] = useState(true);
-  const imageValue = Form.useWatch("image_url", form) as string | null | undefined;
+  const imageValue = Form.useWatch("img", form) as string | null | undefined;
   const thumbValue = Form.useWatch("thumbnail_url", form) as string | null | undefined;
 
   const fetchData = useCallback(async () => {
@@ -120,7 +135,7 @@ export default function ProductsPage() {
     setEditing(null);
     setGenerateThumb(true);
     form.resetFields();
-    form.setFieldsValue({ status: "active", cost_price_usd: 0, thumbnail_url: null });
+    form.setFieldsValue({ status: "active", cost_price_usd: 0, img: null, thumbnail_url: null });
     setModalOpen(true);
   };
 
@@ -138,12 +153,17 @@ export default function ProductsPage() {
   };
 
   const onSubmit = async (values: Partial<Product>) => {
+    if (imageUploading) {
+      message.warning("Please wait for the image upload to finish");
+      return;
+    }
+
     setSaving(true);
     const method = editing ? "PUT" : "POST";
     const url = editing ? `/api/products/${editing.id}` : "/api/products";
     const payload = {
       ...values,
-      image_url: values.image_url?.trim() ? values.image_url : null,
+      img: values.img?.trim() ? values.img : null,
       thumbnail_url: values.thumbnail_url?.trim() ? values.thumbnail_url : null,
     };
     const res = await fetch(url, {
@@ -172,7 +192,7 @@ export default function ProductsPage() {
       dataIndex: "image_url",
       width: 60,
       render: (url: string | null, r: Product) => {
-        const preview = r.thumbnail_url ?? url;
+        const preview = r.img ?? r.thumbnail_url ?? url;
         return preview ? <Image src={preview} width={40} height={40} className="rounded object-cover" alt="" /> : <span>—</span>;
       },
     },
@@ -253,7 +273,10 @@ export default function ProductsPage() {
       <Modal
         title={editing ? "Edit Product" : "Add Product"}
         open={modalOpen}
-        onCancel={() => setModalOpen(false)}
+        onCancel={() => {
+          if (imageUploading) return;
+          setModalOpen(false);
+        }}
         footer={null}
         width={520}
         forceRender
@@ -269,7 +292,7 @@ export default function ProductsPage() {
               options={categories.map((c) => ({ value: c.id, label: c.name }))}
             />
           </Form.Item>
-          <Form.Item name="image_url" label="Image URL">
+          <Form.Item name="img" label="Image">
             <Input placeholder="https://... or Base64 data URL" />
           </Form.Item>
 
@@ -301,10 +324,16 @@ export default function ProductsPage() {
                     const original = await fileToBase64(file.originFileObj);
                     const base64 = await compressImageToBase64(file.originFileObj);
                     const thumbnail = generateThumb ? await generateSquareThumbnail(base64) : null;
-                    form.setFieldValue("image_url", base64);
+                    const compressedBytes = dataUrlSizeInBytes(base64);
+                    if (compressedBytes > MAX_IMAGE_BYTES) {
+                      form.setFieldValue("img", null);
+                      form.setFieldValue("thumbnail_url", null);
+                      message.error(`Image is still too large after compression (${formatBytes(compressedBytes)}). Please use a smaller image.`);
+                      return;
+                    }
+                    form.setFieldValue("img", base64);
                     form.setFieldValue("thumbnail_url", thumbnail);
                     const originalBytes = dataUrlSizeInBytes(original);
-                    const compressedBytes = dataUrlSizeInBytes(base64);
                     const reduced = Math.max(0, originalBytes - compressedBytes);
                     if (reduced > 0) {
                       message.success(
@@ -326,7 +355,7 @@ export default function ProductsPage() {
                 <Button
                   size="small"
                   onClick={() => {
-                    form.setFieldValue("image_url", null);
+                    form.setFieldValue("img", null);
                     form.setFieldValue("thumbnail_url", null);
                   }}
                   disabled={!imageValue && !thumbValue}
@@ -356,8 +385,10 @@ export default function ProductsPage() {
             <Switch checkedChildren="Active" unCheckedChildren="Inactive" />
           </Form.Item>
           <div className="flex gap-2">
-            <Button block onClick={() => setModalOpen(false)}>Cancel</Button>
-            <Button block type="primary" htmlType="submit" loading={saving}>Save</Button>
+            <Button block onClick={() => setModalOpen(false)} disabled={imageUploading}>Cancel</Button>
+            <Button block type="primary" htmlType="submit" loading={saving} disabled={imageUploading}>
+              Save
+            </Button>
           </div>
         </Form>
       </Modal>

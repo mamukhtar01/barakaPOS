@@ -1,6 +1,6 @@
 import { createClient } from "@libsql/client";
 
-const url = process.env.TURSO_DATABASE_URL ?? "file:./barakapos.db";
+const url = process.env.TURSO_DATABASE_URL! ;
 const authToken = process.env.TURSO_AUTH_TOKEN;
 
 export const db = createClient({ url, authToken });
@@ -27,6 +27,7 @@ export async function initDb() {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
       category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL,
+      img TEXT,
       image_url TEXT,
       sale_price_usd REAL NOT NULL DEFAULT 0,
       cost_price_usd REAL NOT NULL DEFAULT 0,
@@ -80,6 +81,12 @@ export async function initDb() {
 
   // Schema migration: add optional thumbnail_url for faster product list rendering.
   const productColumns = await db.execute("PRAGMA table_info(products)");
+  const hasImgColumn = productColumns.rows.some(
+    (col) => (col.name as string) === "img"
+  );
+  if (!hasImgColumn) {
+    await db.execute("ALTER TABLE products ADD COLUMN img TEXT");
+  }
   const hasThumbnailColumn = productColumns.rows.some(
     (col) => (col.name as string) === "thumbnail_url"
   );

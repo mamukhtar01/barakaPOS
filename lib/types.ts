@@ -23,6 +23,7 @@ export interface Product {
   name: string;
   category_id: number | null;
   category_name?: string;
+  img?: string | null;
   image_url: string | null;
   thumbnail_url?: string | null;
   sale_price_usd: number;
