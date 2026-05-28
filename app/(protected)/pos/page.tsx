@@ -50,10 +50,15 @@ const CURRENCY_OPTIONS: { label: string; value: Currency }[] = [
   { label: "SSHL", value: "SSHL" },
 ];
 
+function getProductImage(product: Product) {
+  return product.img ?? product.thumbnail_url ?? product.image_url;
+}
+
 function normalizeSale(raw: Sale): Sale {
   return {
     ...raw,
-    currency: (raw.currency as string) === "SOS" ? "SSHL" : raw.currency,
+    // Legacy rows can still contain SOS and older rows may not have payment_status yet.
+    currency: raw.currency === "SOS" ? "SSHL" : raw.currency,
     payment_status: raw.payment_status ?? "paid",
   };
 }
@@ -74,6 +79,7 @@ export default function POSPage() {
   const [search, setSearch] = useState("");
   const [selectedCurrency, setSelectedCurrency] = useState<Currency>("USD");
   const [exchangeRate, setExchangeRate] = useState(28000);
+  const [shopName, setShopName] = useState("Baraka Café");
 
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [loadingOrders, setLoadingOrders] = useState(false);
@@ -90,8 +96,6 @@ export default function POSPage() {
   const [lastSale, setLastSale] = useState<Sale | null>(null);
   const [checkoutForm] = Form.useForm();
   const [quickCustomerForm] = Form.useForm();
-
-  const shopName = "Baraka Café";
 
   const fetchCategories = useCallback(async () => {
     const res = await fetch("/api/categories");
@@ -126,6 +130,7 @@ export default function POSPage() {
     if (!res.ok) return;
     const data = await res.json();
     if (data.settings?.exchange_rate) setExchangeRate(Number(data.settings.exchange_rate));
+    if (data.settings?.shop_name) setShopName(data.settings.shop_name);
   }, []);
 
   const fetchRecentOrders = useCallback(async () => {
@@ -156,7 +161,9 @@ export default function POSPage() {
   }, [fetchCategories, fetchCustomers, fetchSettings, fetchRecentOrders]);
 
   useEffect(() => {
-    void fetchProducts();
+    void (async () => {
+      await fetchProducts();
+    })();
   }, [fetchProducts]);
 
   const addToCart = (product: Product) => {
@@ -175,7 +182,7 @@ export default function POSPage() {
           product_name: product.name,
           unit_price_usd: Number(product.sale_price_usd),
           quantity: 1,
-          image_url: product.img ?? product.thumbnail_url ?? product.image_url ?? null,
+          image_url: getProductImage(product) ?? null,
         },
       ];
     });
@@ -235,6 +242,7 @@ export default function POSPage() {
     setCheckoutLoading(true);
 
     const rate = values.currency === "SSHL" ? exchangeRate : 1;
+    const notes = values.notes?.trim() ? values.notes.trim() : null;
 
     try {
       const res = await fetch("/api/sales", {
@@ -253,13 +261,13 @@ export default function POSPage() {
             quantity: item.quantity,
           })),
           discount: Number(values.discount ?? 0),
-          notes: values.notes?.trim() ? values.notes.trim() : null,
+          notes,
         }),
       });
 
       const data = await res.json();
       if (!res.ok) {
-        message.error(data.error ?? "Unable to place order");
+        message.error(data.error ?? "Failed to place order");
         return;
       }
 
@@ -278,10 +286,11 @@ export default function POSPage() {
   };
 
   const onQuickCreateCustomer = async (values: { name: string; phone?: string }) => {
+    const phone = values.phone?.trim() ? values.phone.trim() : null;
     const res = await fetch("/api/customers", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: values.name.trim(), phone: values.phone?.trim() || null }),
+      body: JSON.stringify({ name: values.name.trim(), phone }),
     });
 
     const data = await res.json();
@@ -381,7 +390,7 @@ export default function POSPage() {
               ) : (
                 <Row gutter={[10, 10]}>
                   {products.map((product) => {
-                    const image = product.img ?? product.thumbnail_url ?? product.image_url;
+                    const image = getProductImage(product);
                     return (
                       <Col key={product.id} xs={12} sm={8} md={6}>
                         <Card
@@ -392,7 +401,7 @@ export default function POSPage() {
                           onClick={() => addToCart(product)}
                         >
                           {image ? (
-                            <Image src={image} alt={product.name} preview={false} width="100%" height={84} className="rounded object-cover mb-2" />
+                            <Image src={image} alt={`Image of ${product.name}`} preview={false} width="100%" height={84} className="rounded object-cover mb-2" />
                           ) : (
                             <div className="h-[84px] rounded bg-green-50 flex items-center justify-center mb-2">🍽️</div>
                           )}

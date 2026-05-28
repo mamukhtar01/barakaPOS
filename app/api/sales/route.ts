@@ -48,6 +48,10 @@ export async function POST(request: NextRequest) {
     discount,
     notes,
   } = body;
+  const allowedCurrencies = new Set(["USD", "SSHL", "SOS"]);
+  if (currency !== null && currency !== undefined && !allowedCurrencies.has(currency)) {
+    return Response.json({ error: "Invalid currency" }, { status: 400 });
+  }
 
   if (!items || items.length === 0) {
     return Response.json({ error: "No items in sale" }, { status: 400 });
@@ -61,6 +65,9 @@ export async function POST(request: NextRequest) {
   }
 
   const disc = Number(discount ?? 0);
+  if (disc < 0 || disc > total_usd) {
+    return Response.json({ error: "Invalid discount amount" }, { status: 400 });
+  }
   const final_usd = total_usd - disc;
   const final_sos = final_usd * rate;
 

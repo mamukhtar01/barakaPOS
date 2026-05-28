@@ -293,7 +293,7 @@ export default function ProductsPage() {
             />
           </Form.Item>
           <Form.Item name="img" label="Image (Base64)">
-            <Input.TextArea rows={3} placeholder="Base64 image data URL will appear here after upload" />
+            <Input.TextArea rows={3} placeholder="Paste a base64 image data URL or upload below to auto-fill" />
           </Form.Item>
 
           <Form.Item name="thumbnail_url" hidden>
