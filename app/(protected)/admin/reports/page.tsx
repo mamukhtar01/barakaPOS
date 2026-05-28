@@ -60,7 +60,7 @@ export default function ReportsPage() {
     { title: "Date", dataIndex: "date" },
     { title: "Transactions", dataIndex: "transaction_count" },
     { title: "Revenue (USD)", dataIndex: "total_usd", render: (v: number) => `$${Number(v).toFixed(2)}` },
-    { title: "Revenue (SOS)", dataIndex: "total_sos", render: (v: number) => `${Number(v).toLocaleString()} ش` },
+    { title: "Revenue (SSHL)", dataIndex: "total_sos", render: (v: number) => `${Number(v).toLocaleString()} SSHL` },
   ];
 
   const productColumns = [
@@ -133,7 +133,7 @@ export default function ReportsPage() {
                       { title: "Month", dataIndex: "month" },
                       { title: "Transactions", dataIndex: "transaction_count" },
                       { title: "Revenue (USD)", dataIndex: "total_usd", render: (v: number) => `$${Number(v).toFixed(2)}` },
-                      { title: "Revenue (SOS)", dataIndex: "total_sos", render: (v: number) => `${Number(v).toLocaleString()} ش` },
+                      { title: "Revenue (SSHL)", dataIndex: "total_sos", render: (v: number) => `${Number(v).toLocaleString()} SSHL` },
                     ]}
                     rowKey="month"
                     pagination={false}
@@ -181,7 +181,7 @@ export default function ReportsPage() {
                       <Col xs={24} sm={12} key={r.currency}>
                         <Card>
                           <Tag color={r.currency === "USD" ? "green" : "orange"} className="mb-2">
-                            {r.currency === "USD" ? "🇺🇸 USD Dollar" : "🇸🇴 Somali Shilling"}
+                            {r.currency === "USD" ? "🇺🇸 USD Dollar" : "🇸🇴 Somaliland Shilling (SSHL)"}
                           </Tag>
                           <Statistic title="Revenue (USD equiv.)" value={Number(r.total_usd)} prefix="$" precision={2} />
                           <div className="text-gray-400 text-xs mt-1">{r.transaction_count} transactions</div>

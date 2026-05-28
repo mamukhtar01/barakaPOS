@@ -62,8 +62,8 @@ export default function SettingsPage() {
 
           <Form.Item
             name="exchange_rate"
-            label="USD → SOS Exchange Rate"
-            help="How many Somali Shillings equal 1 USD"
+            label="USD → SSHL Exchange Rate"
+            help="How many Somaliland Shillings equal 1 USD"
             rules={[{ required: true }]}
           >
             <InputNumber min={1} step={100} className="w-full" />
