@@ -2,6 +2,13 @@ import { db, initDb } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { NextRequest } from "next/server";
 
+function isBase64ImageDataUrl(value: unknown): value is string {
+  return (
+    typeof value === "string" &&
+    /^data:image\/[a-zA-Z0-9.+-]+;base64,[a-zA-Z0-9+/=]+$/.test(value)
+  );
+}
+
 export async function GET(request: NextRequest) {
   await initDb();
   const session = await getSession();
@@ -41,10 +48,16 @@ export async function POST(request: NextRequest) {
     return Response.json({ error: "Forbidden" }, { status: 403 });
   }
   const body = await request.json();
-  const { name, category_id, img, image_url, thumbnail_url, sale_price_usd, cost_price_usd, status } = body;
-  const productImage = img ?? image_url ?? null;
+  const { name, category_id, img, thumbnail_url, sale_price_usd, cost_price_usd, status } = body;
+  const productImage = img ?? null;
   if (!name || sale_price_usd == null) {
     return Response.json({ error: "Name and sale price required" }, { status: 400 });
+  }
+  if (productImage && !isBase64ImageDataUrl(productImage)) {
+    return Response.json({ error: "Product image must be a base64 image data URL" }, { status: 400 });
+  }
+  if (thumbnail_url && !isBase64ImageDataUrl(thumbnail_url)) {
+    return Response.json({ error: "Thumbnail must be a base64 image data URL" }, { status: 400 });
   }
   const { rows } = await db.execute({
     sql: "INSERT INTO products (name, category_id, img, image_url, thumbnail_url, sale_price_usd, cost_price_usd, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING *",

@@ -2,6 +2,13 @@ import { db, initDb } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { NextRequest } from "next/server";
 
+function isBase64ImageDataUrl(value: unknown): value is string {
+  return (
+    typeof value === "string" &&
+    /^data:image\/[a-zA-Z0-9.+-]+;base64,[a-zA-Z0-9+/=]+$/.test(value)
+  );
+}
+
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   await initDb();
   const session = await getSession();
@@ -21,8 +28,14 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   if (!session || session.role !== "admin") return Response.json({ error: "Forbidden" }, { status: 403 });
   const { id } = await params;
   const body = await request.json();
-  const { name, category_id, img, image_url, thumbnail_url, sale_price_usd, cost_price_usd, status } = body;
-  const productImage = img ?? image_url ?? null;
+  const { name, category_id, img, thumbnail_url, sale_price_usd, cost_price_usd, status } = body;
+  const productImage = img ?? null;
+  if (productImage && !isBase64ImageDataUrl(productImage)) {
+    return Response.json({ error: "Product image must be a base64 image data URL" }, { status: 400 });
+  }
+  if (thumbnail_url && !isBase64ImageDataUrl(thumbnail_url)) {
+    return Response.json({ error: "Thumbnail must be a base64 image data URL" }, { status: 400 });
+  }
   const { rows } = await db.execute({
     sql: "UPDATE products SET name=?, category_id=?, img=?, image_url=?, thumbnail_url=?, sale_price_usd=?, cost_price_usd=?, status=? WHERE id=? RETURNING *",
     args: [name, category_id ?? null, productImage, productImage, thumbnail_url ?? null, Number(sale_price_usd), Number(cost_price_usd ?? 0), status ?? "active", Number(id)],

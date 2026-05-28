@@ -9,15 +9,26 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const limit = Number(searchParams.get("limit") ?? 20);
   const offset = Number(searchParams.get("offset") ?? 0);
+  const status = searchParams.get("status");
+  const args: (number | string)[] = [];
+  let whereClause = "";
+  if (status === "paid" || status === "unpaid") {
+    whereClause = "WHERE s.payment_status = ?";
+    args.push(status);
+  }
   const { rows } = await db.execute({
     sql: `SELECT s.*, c.name as customer_name, u.username as cashier_name
           FROM sales s
           LEFT JOIN customers c ON s.customer_id = c.id
           LEFT JOIN users u ON s.cashier_id = u.id
+          ${whereClause}
           ORDER BY s.created_at DESC LIMIT ? OFFSET ?`,
-    args: [limit, offset],
+    args: [...args, limit, offset],
   });
-  const countResult = await db.execute("SELECT COUNT(*) as total FROM sales");
+  const countResult = await db.execute({
+    sql: `SELECT COUNT(*) as total FROM sales s ${whereClause}`,
+    args,
+  });
   return Response.json({ sales: rows, total: countResult.rows[0].total });
 }
 
@@ -27,7 +38,16 @@ export async function POST(request: NextRequest) {
   if (!session) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await request.json();
-  const { customer_id, currency, exchange_rate, payment_method, items, discount, notes } = body;
+  const {
+    customer_id,
+    currency,
+    exchange_rate,
+    payment_method,
+    payment_status,
+    items,
+    discount,
+    notes,
+  } = body;
 
   if (!items || items.length === 0) {
     return Response.json({ error: "No items in sale" }, { status: 400 });
@@ -44,15 +64,19 @@ export async function POST(request: NextRequest) {
   const final_usd = total_usd - disc;
   const final_sos = final_usd * rate;
 
+  const normalizedCurrency = currency === "SOS" ? "SSHL" : (currency ?? "USD");
+  const normalizedStatus = payment_status === "unpaid" ? "unpaid" : "paid";
+
   const saleResult = await db.execute({
-    sql: `INSERT INTO sales (customer_id, cashier_id, currency, exchange_rate, payment_method, total_usd, total_sos, discount, notes)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING *`,
+    sql: `INSERT INTO sales (customer_id, cashier_id, currency, exchange_rate, payment_method, payment_status, total_usd, total_sos, discount, notes)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING *`,
     args: [
       customer_id ?? null,
       session.id,
-      currency ?? "USD",
+      normalizedCurrency,
       rate,
       payment_method ?? "cash",
+      normalizedStatus,
       final_usd,
       final_sos,
       disc,

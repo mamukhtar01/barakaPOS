@@ -292,8 +292,8 @@ export default function ProductsPage() {
               options={categories.map((c) => ({ value: c.id, label: c.name }))}
             />
           </Form.Item>
-          <Form.Item name="img" label="Image">
-            <Input placeholder="https://... or Base64 data URL" />
+          <Form.Item name="img" label="Image (Base64)">
+            <Input.TextArea rows={3} placeholder="Base64 image data URL will appear here after upload" />
           </Form.Item>
 
           <Form.Item name="thumbnail_url" hidden>
@@ -372,10 +372,10 @@ export default function ProductsPage() {
           </Form.Item>
           <div className="flex gap-3">
             <Form.Item name="sale_price_usd" label="Sale Price (USD)" className="flex-1" rules={[{ required: true }]}>
-              <InputNumber min={0} step={0.5} className="w-full" prefix="$" />
+              <InputNumber min={0} step={0.5} className="w-full" addonBefore="$" />
             </Form.Item>
             <Form.Item name="cost_price_usd" label="Cost Price (USD)" className="flex-1">
-              <InputNumber min={0} step={0.5} className="w-full" prefix="$" />
+              <InputNumber min={0} step={0.5} className="w-full" addonBefore="$" />
             </Form.Item>
           </div>
           <Form.Item name="status" label="Status" valuePropName="checked"

@@ -1,7 +1,8 @@
 export type Role = "admin" | "cashier";
-export type Currency = "USD" | "SOS";
+export type Currency = "USD" | "SSHL";
 export type PaymentMethod = "cash" | "mobile" | "card";
 export type ProductStatus = "active" | "inactive";
+export type SalePaymentStatus = "paid" | "unpaid";
 
 export interface User {
   id: number;
@@ -48,6 +49,7 @@ export interface Sale {
   currency: Currency;
   exchange_rate: number;
   payment_method: PaymentMethod;
+  payment_status: SalePaymentStatus;
   total_usd: number;
   total_sos: number;
   discount: number;
