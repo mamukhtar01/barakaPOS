@@ -14,7 +14,6 @@ import {
   Image,
   Input,
   InputNumber,
-  List,
   Modal,
   Row,
   Segmented,
@@ -445,26 +444,22 @@ export default function POSPage() {
               ) : recentOrders.length === 0 ? (
                 <Empty description="No recent orders" />
               ) : (
-                <List
-                  dataSource={recentOrders}
-                  renderItem={(order) => (
-                    <List.Item
-                      className="cursor-pointer"
+                <div className="space-y-2">
+                  {recentOrders.map((order) => (
+                    <div
+                      key={order.id}
+                      className="cursor-pointer border border-gray-200 rounded-md px-3 py-2 flex items-start justify-between gap-3"
                       onClick={() => void loadOrderDetails(order.id)}
-                      actions={[order.payment_status === "paid" ? <Tag color="green" key="status">Paid</Tag> : <Tag color="orange" key="status">Unpaid</Tag>]}
                     >
-                      <List.Item.Meta
-                        title={<Text strong>Order #{order.id}</Text>}
-                        description={
-                          <div>
-                            <Text className="block text-xs">{new Date(order.created_at).toLocaleString()}</Text>
-                            <Text className="block text-xs">{formatUsd(order.total_usd)} / {order.total_sos.toLocaleString()} SSHL</Text>
-                          </div>
-                        }
-                      />
-                    </List.Item>
-                  )}
-                />
+                      <div>
+                        <Text strong>Order #{order.id}</Text>
+                        <Text className="block text-xs">{new Date(order.created_at).toLocaleString()}</Text>
+                        <Text className="block text-xs">{formatUsd(order.total_usd)} / {order.total_sos.toLocaleString()} SSHL</Text>
+                      </div>
+                      {order.payment_status === "paid" ? <Tag color="green">Paid</Tag> : <Tag color="orange">Unpaid</Tag>}
+                    </div>
+                  ))}
+                </div>
               )}
             </Card>
           </Col>
@@ -480,7 +475,7 @@ export default function POSPage() {
       <Drawer
         title="Recent orders"
         placement="bottom"
-        height="80vh"
+        size="large"
         open={ordersDrawerOpen}
         onClose={() => setOrdersDrawerOpen(false)}
       >
@@ -489,31 +484,31 @@ export default function POSPage() {
         ) : recentOrders.length === 0 ? (
           <Empty description="No recent orders" />
         ) : (
-          <List
-            dataSource={recentOrders}
-            renderItem={(order) => (
-              <List.Item
-                className="cursor-pointer"
+          <div className="space-y-2">
+            {recentOrders.map((order) => (
+              <div
+                key={order.id}
+                className="cursor-pointer border border-gray-200 rounded-md px-3 py-2 flex items-start justify-between gap-3"
                 onClick={() => {
                   setOrdersDrawerOpen(false);
                   void loadOrderDetails(order.id);
                 }}
-                actions={[order.payment_status === "paid" ? <Tag color="green" key="status">Paid</Tag> : <Tag color="orange" key="status">Unpaid</Tag>]}
               >
-                <List.Item.Meta
-                  title={<Text strong>Order #{order.id}</Text>}
-                  description={`${formatUsd(order.total_usd)} / ${order.total_sos.toLocaleString()} SSHL`}
-                />
-              </List.Item>
-            )}
-          />
+                <div>
+                  <Text strong>Order #{order.id}</Text>
+                  <Text className="block text-xs">{formatUsd(order.total_usd)} / {order.total_sos.toLocaleString()} SSHL</Text>
+                </div>
+                {order.payment_status === "paid" ? <Tag color="green">Paid</Tag> : <Tag color="orange">Unpaid</Tag>}
+              </div>
+            ))}
+          </div>
         )}
       </Drawer>
 
       <Drawer
         title={`Cart (${cartCount})`}
         placement="bottom"
-        height="78vh"
+        size="large"
         open={cartDrawerOpen}
         onClose={() => setCartDrawerOpen(false)}
       >
@@ -670,18 +665,14 @@ export default function POSPage() {
               <Tag>{selectedOrder.customer_name ?? "Walk-in"}</Tag>
               {selectedOrder.payment_status === "paid" ? <Tag color="green">Paid</Tag> : <Tag color="orange">Unpaid</Tag>}
             </Space>
-            <List
-              size="small"
-              dataSource={selectedOrder.items ?? []}
-              renderItem={(item) => (
-                <List.Item>
-                  <div className="w-full flex justify-between gap-2">
-                    <Text>{item.product_name} × {item.quantity}</Text>
-                    <Text>{formatUsd(item.subtotal_usd)} / {item.subtotal_sos.toLocaleString()} SSHL</Text>
-                  </div>
-                </List.Item>
-              )}
-            />
+            <div className="space-y-2">
+              {(selectedOrder.items ?? []).map((item, index) => (
+                <div key={`${item.product_id ?? "na"}-${index}`} className="w-full flex justify-between gap-2 border-b border-gray-100 pb-2">
+                  <Text>{item.product_name} × {item.quantity}</Text>
+                  <Text>{formatUsd(item.subtotal_usd)} / {item.subtotal_sos.toLocaleString()} SSHL</Text>
+                </div>
+              ))}
+            </div>
             <Divider />
             <Text strong>Total: {formatUsd(selectedOrder.total_usd)} / {selectedOrder.total_sos.toLocaleString()} SSHL</Text>
           </div>
@@ -741,29 +732,25 @@ function CartPanel({
       {cart.length === 0 ? (
         <Empty description="No items" />
       ) : (
-        <List
-          size="small"
-          dataSource={cart}
-          renderItem={(item) => (
-            <List.Item>
-              <div className="w-full">
-                <div className="flex justify-between gap-2">
-                  <Text strong className="truncate">{item.product_name}</Text>
-                  <Text>{displayPrice(item.unit_price_usd * item.quantity)}</Text>
-                </div>
-                <div className="flex items-center justify-between mt-1">
-                  <Text type="secondary" className="text-xs">{displayPrice(item.unit_price_usd)} each</Text>
-                  <Space size={4}>
-                    <Button size="small" icon={<MinusOutlined />} onClick={() => updateQty(item.product_id, -1)} />
-                    <Text>{item.quantity}</Text>
-                    <Button size="small" icon={<PlusOutlined />} onClick={() => updateQty(item.product_id, 1)} />
-                    <Button size="small" danger icon={<DeleteOutlined />} onClick={() => removeItem(item.product_id)} />
-                  </Space>
-                </div>
+        <div className="space-y-2">
+          {cart.map((item) => (
+            <div key={item.product_id} className="border border-gray-200 rounded-md px-3 py-2">
+              <div className="flex justify-between gap-2">
+                <Text strong className="truncate">{item.product_name}</Text>
+                <Text>{displayPrice(item.unit_price_usd * item.quantity)}</Text>
               </div>
-            </List.Item>
-          )}
-        />
+              <div className="flex items-center justify-between mt-1">
+                <Text type="secondary" className="text-xs">{displayPrice(item.unit_price_usd)} each</Text>
+                <Space size={4}>
+                  <Button size="small" icon={<MinusOutlined />} onClick={() => updateQty(item.product_id, -1)} />
+                  <Text>{item.quantity}</Text>
+                  <Button size="small" icon={<PlusOutlined />} onClick={() => updateQty(item.product_id, 1)} />
+                  <Button size="small" danger icon={<DeleteOutlined />} onClick={() => removeItem(item.product_id)} />
+                </Space>
+              </div>
+            </div>
+          ))}
+        </div>
       )}
 
       <Divider className="my-2" />

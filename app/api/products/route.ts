@@ -1,7 +1,7 @@
 import { db, initDb } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { NextRequest } from "next/server";
-import { isBase64ImageDataUrl } from "@/lib/validators";
+import { isBase64ImageDataUrl, normalizeOptionalImageDataUrl } from "@/lib/validators";
 
 export async function GET(request: NextRequest) {
   await initDb();
@@ -42,24 +42,27 @@ export async function POST(request: NextRequest) {
     return Response.json({ error: "Forbidden" }, { status: 403 });
   }
   const body = await request.json();
-  const { name, category_id, img, thumbnail_url, sale_price_usd, cost_price_usd, status } = body;
-  const productImage = img ?? null;
+  const { name, category_id, img, image_url, thumbnail_url, sale_price_usd, cost_price_usd, status } = body;
+
+  const productImage = normalizeOptionalImageDataUrl(img ?? image_url);
+  const productThumb = normalizeOptionalImageDataUrl(thumbnail_url);
   if (!name || sale_price_usd === null || sale_price_usd === undefined) {
     return Response.json({ error: "Name and sale price required" }, { status: 400 });
   }
   if (productImage && !isBase64ImageDataUrl(productImage)) {
     return Response.json({ error: "Product image must be a base64 image data URL" }, { status: 400 });
   }
-  if (thumbnail_url && !isBase64ImageDataUrl(thumbnail_url)) {
+  if (productThumb && !isBase64ImageDataUrl(productThumb)) {
     return Response.json({ error: "Product thumbnail must be a base64 image data URL" }, { status: 400 });
   }
   const { rows } = await db.execute({
-    sql: "INSERT INTO products (name, category_id, img, thumbnail_url, sale_price_usd, cost_price_usd, status) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING *",
+    sql: "INSERT INTO products (name, category_id, img, image_url, thumbnail_url, sale_price_usd, cost_price_usd, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING *",
     args: [
       name,
       category_id ?? null,
       productImage,
-      thumbnail_url ?? null,
+      productImage,
+      productThumb,
       Number(sale_price_usd),
       Number(cost_price_usd ?? 0),
       status ?? "active",

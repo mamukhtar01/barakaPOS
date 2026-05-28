@@ -28,6 +28,7 @@ export async function initDb() {
       name TEXT NOT NULL,
       category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL,
       img TEXT,
+      thumbnail_url TEXT,
       image_url TEXT,
       sale_price_usd REAL NOT NULL DEFAULT 0,
       cost_price_usd REAL NOT NULL DEFAULT 0,
@@ -94,6 +95,17 @@ export async function initDb() {
   if (!hasThumbnailColumn) {
     await db.execute("ALTER TABLE products ADD COLUMN thumbnail_url TEXT");
   }
+  const hasImageUrlColumn = productColumns.rows.some(
+    (col) => (col.name as string) === "image_url"
+  );
+  if (!hasImageUrlColumn) {
+    await db.execute("ALTER TABLE products ADD COLUMN image_url TEXT");
+  }
+
+  // Keep legacy `image_url` aligned for older consumers and historical rows.
+  await db.execute(
+    "UPDATE products SET image_url = img WHERE img IS NOT NULL AND (image_url IS NULL OR image_url = '')"
+  );
 
   const saleColumns = await db.execute("PRAGMA table_info(sales)");
   const hasPaymentStatusColumn = saleColumns.rows.some(

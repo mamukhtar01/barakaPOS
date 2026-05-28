@@ -25,7 +25,11 @@ export default function SettingsPage() {
     setLoading(false);
   }, [form]);
 
-  useEffect(() => { fetchSettings(); }, [fetchSettings]);
+  useEffect(() => {
+    void (async () => {
+      await fetchSettings();
+    })();
+  }, [fetchSettings]);
 
   const onSubmit = async (values: { shop_name: string; exchange_rate: number; receipt_footer: string }) => {
     setSaving(true);

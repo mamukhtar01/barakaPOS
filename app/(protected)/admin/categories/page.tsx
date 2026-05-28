@@ -25,7 +25,11 @@ export default function CategoriesPage() {
     setLoading(false);
   }, []);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => {
+    void (async () => {
+      await fetchData();
+    })();
+  }, [fetchData]);
 
   const openAdd = () => {
     setEditing(null);
@@ -94,7 +98,7 @@ export default function CategoriesPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <Title level={4} className="!mb-0">Categories</Title>
+        <Title level={4} className="mb-0">Categories</Title>
         <Button type="primary" icon={<PlusOutlined />} onClick={openAdd}>Add Category</Button>
       </div>
 

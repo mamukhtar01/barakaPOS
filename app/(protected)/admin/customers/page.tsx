@@ -26,7 +26,11 @@ export default function CustomersPage() {
     setLoading(false);
   }, [search]);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => {
+    void (async () => {
+      await fetchData();
+    })();
+  }, [fetchData]);
 
   const openAdd = () => {
     setEditing(null);
@@ -86,7 +90,7 @@ export default function CustomersPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-        <Title level={4} className="!mb-0">Customers</Title>
+        <Title level={4} className="mb-0!">Customers</Title>
         <Space wrap>
           <Input
             prefix={<SearchOutlined />}

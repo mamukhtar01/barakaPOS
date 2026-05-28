@@ -15,6 +15,7 @@ Hard rules:
 - Do not introduce deprecated Ant Design APIs.
 - If code being edited uses deprecated Ant Design APIs, migrate them in the same change.
 - Treat Ant Design deprecation warnings as errors to fix, not warnings to ignore.
+- Never reintroduce any deprecated API listed in this file.
 
 Required behavior:
 1. Check official Ant Design docs for the currently supported API before writing or changing Ant Design components.
@@ -54,6 +55,36 @@ Known deprecation rules for this repo:
   - Example migration:
     - Before: `<Drawer placement="left" width={220} />`
     - After: `<Drawer placement="left" size="default" />`
+- `Space`:
+  - Deprecated: `direction`
+  - Use instead: `orientation`
+  - Example migration:
+    - Before: `<Space direction="vertical" />`
+    - After: `<Space orientation="vertical" />`
+- `Statistic`:
+  - Deprecated: `valueStyle`
+  - Use instead: `styles.content`
+  - Example migration:
+    - Before: `<Statistic valueStyle={{ color: "#16a34a" }} />`
+    - After: `<Statistic styles={{ content: { color: "#16a34a" } }} />`
+- `InputNumber`:
+  - Deprecated: `addonBefore`
+  - Use instead: `Space.Compact` with a prefix element
+  - Example migration:
+    - Before: `<InputNumber addonBefore="$" />`
+    - After: `<Space.Compact><div>$</div><InputNumber /></Space.Compact>`
+- `message`:
+  - Deprecated pattern: static message functions in themed apps (`message.success`, `message.error`, etc.)
+  - Use instead: context-aware API from `App.useApp()`
+  - Example migration:
+    - Before: `import { message } from "antd"; message.success("Saved")`
+    - After: `import { App } from "antd"; const { message } = App.useApp(); message.success("Saved")`
+- `List`:
+  - Deprecated: `List` component usage
+  - Use instead: plain mapped layout blocks with `div`/`Card`/`Space` and existing typography components
+  - Example migration:
+    - Before: `<List dataSource={items} renderItem={...} />`
+    - After: `<div>{items.map(...)}</div>`
 
 Implementation checklist for any Ant Design change:
 - Search edited files for deprecated Ant Design props/components.

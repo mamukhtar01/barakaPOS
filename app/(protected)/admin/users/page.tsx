@@ -32,7 +32,11 @@ export default function UsersPage() {
     setLoading(false);
   }, []);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => {
+    void (async () => {
+      await fetchData();
+    })();
+  }, [fetchData]);
 
   const openAdd = () => {
     setEditing(null);

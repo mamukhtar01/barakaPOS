@@ -129,7 +129,11 @@ export default function ProductsPage() {
     setLoading(false);
   }, []);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => {
+    void (async () => {
+      await fetchData();
+    })();
+  }, [fetchData]);
 
   const openAdd = () => {
     setEditing(null);
@@ -139,10 +143,27 @@ export default function ProductsPage() {
     setModalOpen(true);
   };
 
-  const openEdit = (p: Product) => {
+  const openEdit = async (p: Product) => {
     setEditing(p);
     setGenerateThumb(true);
-    form.setFieldsValue(p);
+    form.resetFields();
+
+    let source: Partial<Product> = p;
+    try {
+      const res = await fetch(`/api/products/${p.id}`);
+      if (res.ok) {
+        const data = await res.json();
+        source = (data.product as Partial<Product>) ?? p;
+      }
+    } catch {
+      source = p;
+    }
+
+    form.setFieldsValue({
+      ...source,
+      img: source.img ?? source.image_url ?? null,
+      thumbnail_url: source.thumbnail_url ?? null,
+    });
     setModalOpen(true);
   };
 
@@ -152,7 +173,7 @@ export default function ProductsPage() {
     fetchData();
   };
 
-  const onSubmit = async (values: Partial<Product>) => {
+  const onSubmit = async (_values: Partial<Product>) => {
     if (imageUploading) {
       message.warning("Please wait for the image upload to finish");
       return;
@@ -161,10 +182,12 @@ export default function ProductsPage() {
     setSaving(true);
     const method = editing ? "PUT" : "POST";
     const url = editing ? `/api/products/${editing.id}` : "/api/products";
+    const formValues = form.getFieldsValue(true) as Partial<Product>;
     const payload = {
-      ...values,
-      img: values.img?.trim() ? values.img : null,
-      thumbnail_url: values.thumbnail_url?.trim() ? values.thumbnail_url : null,
+      ...formValues,
+      img: formValues.img?.trim() ? formValues.img : null,
+      thumbnail_url: formValues.thumbnail_url?.trim() ? formValues.thumbnail_url : null,
+      image_url: formValues.img?.trim() ? formValues.img : null,
     };
     const res = await fetch(url, {
       method,
@@ -292,15 +315,15 @@ export default function ProductsPage() {
               options={categories.map((c) => ({ value: c.id, label: c.name }))}
             />
           </Form.Item>
-          <Form.Item name="img" label="Image (Base64)">
-            <Input.TextArea rows={3} placeholder="Paste a base64 image data URL or upload below to auto-fill" />
+          <Form.Item name="img" hidden>
+            <Input />
           </Form.Item>
 
           <Form.Item name="thumbnail_url" hidden>
             <Input />
           </Form.Item>
 
-          <Form.Item label="Upload Image (Base64)">
+          <Form.Item label="Product Image">
             <Space orientation="vertical" size="small" className="w-full">
               <div className="flex items-center gap-2">
                 <Switch checked={generateThumb} onChange={setGenerateThumb} />
@@ -310,26 +333,22 @@ export default function ProductsPage() {
                 accept="image/*"
                 maxCount={1}
                 showUploadList={false}
-                beforeUpload={(file) => {
+                beforeUpload={async (file) => {
                   if (!file.type.startsWith("image/")) {
                     message.error("Please select an image file");
                     return Upload.LIST_IGNORE;
                   }
-                  return false;
-                }}
-                onChange={async ({ file }) => {
-                  if (!file.originFileObj) return;
                   try {
                     setImageUploading(true);
-                    const original = await fileToBase64(file.originFileObj);
-                    const base64 = await compressImageToBase64(file.originFileObj);
+                    const original = await fileToBase64(file);
+                    const base64 = await compressImageToBase64(file);
                     const thumbnail = generateThumb ? await generateSquareThumbnail(base64) : null;
                     const compressedBytes = dataUrlSizeInBytes(base64);
                     if (compressedBytes > MAX_IMAGE_BYTES) {
                       form.setFieldValue("img", null);
                       form.setFieldValue("thumbnail_url", null);
                       message.error(`Image is still too large after compression (${formatBytes(compressedBytes)}). Please use a smaller image.`);
-                      return;
+                      return Upload.LIST_IGNORE;
                     }
                     form.setFieldValue("img", base64);
                     form.setFieldValue("thumbnail_url", thumbnail);
@@ -347,6 +366,7 @@ export default function ProductsPage() {
                   } finally {
                     setImageUploading(false);
                   }
+                  return Upload.LIST_IGNORE;
                 }}
               >
                 <Button loading={imageUploading}>Choose Image File</Button>
@@ -371,11 +391,21 @@ export default function ProductsPage() {
             </Space>
           </Form.Item>
           <div className="flex gap-3">
-            <Form.Item name="sale_price_usd" label="Sale Price (USD)" className="flex-1" rules={[{ required: true }]}>
-              <InputNumber min={0} step={0.5} className="w-full" addonBefore="$" />
+            <Form.Item label="Sale Price (USD)" className="flex-1" required>
+              <Space.Compact className="w-full">
+                <div className="inline-flex items-center px-3 border border-r-0 border-gray-300 rounded-l-md bg-gray-50 text-gray-500">$</div>
+                <Form.Item name="sale_price_usd" noStyle rules={[{ required: true, message: "Enter sale price" }]}>
+                  <InputNumber min={0} step={0.5} className="w-full" />
+                </Form.Item>
+              </Space.Compact>
             </Form.Item>
-            <Form.Item name="cost_price_usd" label="Cost Price (USD)" className="flex-1">
-              <InputNumber min={0} step={0.5} className="w-full" addonBefore="$" />
+            <Form.Item label="Cost Price (USD)" className="flex-1">
+              <Space.Compact className="w-full">
+                <div className="inline-flex items-center px-3 border border-r-0 border-gray-300 rounded-l-md bg-gray-50 text-gray-500">$</div>
+                <Form.Item name="cost_price_usd" noStyle>
+                  <InputNumber min={0} step={0.5} className="w-full" />
+                </Form.Item>
+              </Space.Compact>
             </Form.Item>
           </div>
           <Form.Item name="status" label="Status" valuePropName="checked"
