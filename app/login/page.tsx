@@ -4,6 +4,7 @@ import { useState, useRef } from "react";
 import { Button, Input, Form, Card, Typography, Alert, Space } from "antd";
 import { UserOutlined, LockOutlined } from "@ant-design/icons";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/components/ClientProvider";
 
 const { Title, Text } = Typography;
 
@@ -13,6 +14,7 @@ export default function LoginPage() {
   const [pin, setPin] = useState("");
   const [form] = Form.useForm();
   const router = useRouter();
+  const { refresh } = useAuth();
   const pinRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   const handlePinChange = (index: number, value: string) => {
@@ -54,7 +56,8 @@ export default function LoginPage() {
         setPin("");
         pinRefs.current[0]?.focus();
       } else {
-        router.push("/pos");
+        await refresh();
+        router.replace("/pos");
         router.refresh();
       }
     } catch {
@@ -67,21 +70,21 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-emerald-100 p-4">
       <Card className="w-full max-w-sm shadow-xl rounded-2xl">
-        <Space direction="vertical" className="w-full text-center" size="large">
+        <Space orientation="vertical" className="w-full text-center" size="large">
           <div>
             <div className="flex justify-center mb-2">
               <div className="w-16 h-16 rounded-full bg-green-600 flex items-center justify-center text-white text-2xl font-bold shadow-lg">
                 B
               </div>
             </div>
-            <Title level={3} className="!mb-0">
+            <Title level={3} className="mb-0!">
               Baraka POS
             </Title>
             <Text type="secondary">Sign in to continue</Text>
           </div>
 
           {error && (
-            <Alert type="error" message={error} showIcon closable onClose={() => setError(null)} />
+            <Alert type="error" title={error} showIcon closable onClose={() => setError(null)} />
           )}
 
           <Form form={form} onFinish={onFinish} layout="vertical" requiredMark={false}>

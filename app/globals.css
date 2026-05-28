@@ -18,6 +18,16 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+.admin-content-offset {
+  margin-left: 0;
+}
+
+@media (min-width: 768px) {
+  .admin-content-offset {
+    margin-left: 220px;
+  }
+}
+
 /* Print receipt styles */
 @media print {
   body * {

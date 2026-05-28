@@ -58,7 +58,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <Sider
         width={220}
         className="hidden md:flex flex-col bg-white shadow-md"
-        style={{ position: "fixed", height: "100vh", left: 0, top: 0, overflow: "auto" }}
+        style={{ position: "fixed", height: "100vh", left: 0, top: 0, overflow: "auto", zIndex: 20 }}
       >
         <div className="flex items-center gap-2 px-4 py-4 border-b">
           <ShopOutlined className="text-green-600 text-xl" />
@@ -76,8 +76,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         placement="left"
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
-        width={220}
-        bodyStyle={{ padding: 0 }}
+        size="default"
+        styles={{ body: { padding: 0 } }}
         className="md:hidden"
       >
         <div className="flex items-center gap-2 px-4 py-4 border-b">
@@ -91,7 +91,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </div>
       </Drawer>
 
-      <Layout style={{ marginLeft: 0 }} className="md:ml-[220px]">
+      <Layout className="admin-content-offset">
         <Header className="bg-white shadow-sm flex items-center justify-between px-4 h-14">
           <Space>
             <Button

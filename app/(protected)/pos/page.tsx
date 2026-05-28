@@ -260,7 +260,7 @@ export default function POSPage() {
                     <Card
                       hoverable
                       className="cursor-pointer select-none h-full"
-                      bodyStyle={{ padding: "10px" }}
+                      styles={{ body: { padding: "10px" } }}
                       onClick={() => addToCart(p)}
                     >
                       {p.image_url ? (
@@ -328,7 +328,7 @@ export default function POSPage() {
       <Drawer
         title={`Cart (${cartCount})`}
         placement="bottom"
-        height="80vh"
+        size="large"
         open={cartDrawerOpen}
         onClose={() => setCartDrawerOpen(false)}
         className="md:hidden"
@@ -408,7 +408,7 @@ export default function POSPage() {
                 <div className="p-3 bg-green-50 rounded-lg mb-4">
                   <div className="flex justify-between">
                     <Text strong>Total to Collect:</Text>
-                    <Title level={4} className="!mb-0 text-green-700">{displayTotal}</Title>
+                    <Title level={4} className="mb-0! text-green-700">{displayTotal}</Title>
                   </div>
                   {currency === "SOS" && (
                     <Text type="secondary" className="text-xs">Rate: 1 USD = {exchangeRate.toLocaleString()} SOS</Text>
@@ -501,7 +501,7 @@ function CartPanel({
       <div className="border-t p-3 space-y-2">
         <div className="flex justify-between items-center">
           <Text strong>Total</Text>
-          <Title level={4} className="!mb-0 text-green-700">{displayPrice(cartTotal)}</Title>
+          <Title level={4} className="mb-0! text-green-700">{displayPrice(cartTotal)}</Title>
         </div>
         <Button
           type="primary"

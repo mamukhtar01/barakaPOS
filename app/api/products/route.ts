@@ -41,16 +41,17 @@ export async function POST(request: NextRequest) {
     return Response.json({ error: "Forbidden" }, { status: 403 });
   }
   const body = await request.json();
-  const { name, category_id, image_url, sale_price_usd, cost_price_usd, status } = body;
+  const { name, category_id, image_url, thumbnail_url, sale_price_usd, cost_price_usd, status } = body;
   if (!name || sale_price_usd == null) {
     return Response.json({ error: "Name and sale price required" }, { status: 400 });
   }
   const { rows } = await db.execute({
-    sql: "INSERT INTO products (name, category_id, image_url, sale_price_usd, cost_price_usd, status) VALUES (?, ?, ?, ?, ?, ?) RETURNING *",
+    sql: "INSERT INTO products (name, category_id, image_url, thumbnail_url, sale_price_usd, cost_price_usd, status) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING *",
     args: [
       name,
       category_id ?? null,
       image_url ?? null,
+      thumbnail_url ?? null,
       Number(sale_price_usd),
       Number(cost_price_usd ?? 0),
       status ?? "active",

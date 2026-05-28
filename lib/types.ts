@@ -24,6 +24,7 @@ export interface Product {
   category_id: number | null;
   category_name?: string;
   image_url: string | null;
+  thumbnail_url?: string | null;
   sale_price_usd: number;
   cost_price_usd: number;
   status: ProductStatus;

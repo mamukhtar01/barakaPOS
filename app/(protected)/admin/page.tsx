@@ -43,7 +43,7 @@ export default function AdminDashboard() {
               value={summary?.today.total_usd ?? 0}
               prefix={<DollarOutlined />}
               precision={2}
-              valueStyle={{ color: "#16a34a" }}
+              styles={{ content: { color: "#16a34a" } }}
               suffix="USD"
             />
             <div className="text-gray-400 text-xs mt-1">{summary?.today.cnt ?? 0} transactions</div>
@@ -56,7 +56,7 @@ export default function AdminDashboard() {
               value={summary?.month.total_usd ?? 0}
               prefix={<DollarOutlined />}
               precision={2}
-              valueStyle={{ color: "#1677ff" }}
+              styles={{ content: { color: "#1677ff" } }}
               suffix="USD"
             />
             <div className="text-gray-400 text-xs mt-1">{summary?.month.cnt ?? 0} transactions</div>
@@ -68,7 +68,7 @@ export default function AdminDashboard() {
               title="Total Sales"
               value={summary?.total.cnt ?? 0}
               prefix={<ShoppingCartOutlined />}
-              valueStyle={{ color: "#722ed1" }}
+              styles={{ content: { color: "#722ed1" } }}
               suffix="orders"
             />
             <div className="text-gray-400 text-xs mt-1">${(summary?.total.total_usd ?? 0).toFixed(2)} total revenue</div>
@@ -80,7 +80,7 @@ export default function AdminDashboard() {
               title="Products"
               value={productCount}
               prefix={<AppstoreOutlined />}
-              valueStyle={{ color: "#fa8c16" }}
+              styles={{ content: { color: "#fa8c16" } }}
             />
             <div className="text-gray-400 text-xs mt-1">{customerCount} customers</div>
           </Card>

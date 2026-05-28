@@ -78,6 +78,15 @@ export async function initDb() {
     INSERT OR IGNORE INTO settings (key, value) VALUES ('receipt_footer', 'Thank you for your visit!');
   `);
 
+  // Schema migration: add optional thumbnail_url for faster product list rendering.
+  const productColumns = await db.execute("PRAGMA table_info(products)");
+  const hasThumbnailColumn = productColumns.rows.some(
+    (col) => (col.name as string) === "thumbnail_url"
+  );
+  if (!hasThumbnailColumn) {
+    await db.execute("ALTER TABLE products ADD COLUMN thumbnail_url TEXT");
+  }
+
   // Seed default admin if no users exist
   const { rows } = await db.execute("SELECT COUNT(*) as cnt FROM users");
   if ((rows[0].cnt as number) === 0) {
