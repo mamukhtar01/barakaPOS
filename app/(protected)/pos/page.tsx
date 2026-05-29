@@ -640,8 +640,13 @@ export default function POSPage() {
             </Card>
           </Col>
 
-          <Col xs={24} lg={8} className="h-full hidden md:flex flex-col gap-3 overflow-hidden">
-            <Card title={`Cart (${cartCount})`} size="small" styles={{ body: { paddingTop: 12 } }}>
+          <Col xs={24} lg={8} className="h-full hidden md:flex flex-col gap-3 min-h-0">
+            <Card
+              title={`Cart (${cartCount})`}
+              size="small"
+              className="shrink-0"
+              styles={{ body: { paddingTop: 12, maxHeight: "44vh", display: "flex", flexDirection: "column", minHeight: 0 } }}
+            >
               <CartPanel
                 cart={cart}
                 cartCount={cartCount}
@@ -671,8 +676,8 @@ export default function POSPage() {
             <Card
               title="Recent orders"
               size="small"
-              className="flex-1 overflow-hidden"
-              styles={{ body: { height: "100%", overflowY: "auto" } }}
+              className="flex-1 overflow-hidden flex flex-col"
+              styles={{ body: { flex: 1, overflowY: "auto", minHeight: 0 } }}
               extra={<Button size="small" onClick={() => void fetchRecentOrders()}>Refresh</Button>}
             >
               {loadingOrders ? (
@@ -707,7 +712,7 @@ export default function POSPage() {
         ) : recentOrders.length === 0 ? (
           <Empty description="No recent orders" />
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-2 overflow-y-auto flex-1">
             {recentOrders.map((order) => renderOrderItem(order))}
           </div>
         )}
@@ -718,6 +723,7 @@ export default function POSPage() {
         size={560}
         open={cartDrawerOpen}
         onClose={() => setCartDrawerOpen(false)}
+        styles={{ body: { display: "flex", flexDirection: "column", minHeight: 0 } }}
       >
         <CartPanel
           cart={cart}
@@ -905,7 +911,7 @@ function CartPanel({
   onCheckout: () => void;
 }) {
   return (
-    <div className="space-y-3">
+    <div className="h-full min-h-0 flex flex-col gap-3">
       {editingOrderId ? (
         <div className="rounded-md border border-blue-200 bg-blue-50 px-3 py-2">
           <Text strong>{`Updating Order #${editingOrderId}`}</Text>
@@ -924,29 +930,31 @@ function CartPanel({
         </Button>
       </div>
 
-      {cart.length === 0 ? (
-        <Empty description="No items" />
-      ) : (
-        <div className="space-y-2">
-          {cart.map((item) => (
-            <div key={item.product_id} className="border border-gray-200 rounded-md px-3 py-2">
-              <div className="flex justify-between gap-2">
-                <Text strong className="truncate">{item.product_name}</Text>
-                <Text>{displayPrice(item.unit_price_usd * item.quantity)}</Text>
+      <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+        {cart.length === 0 ? (
+          <Empty description="No items" />
+        ) : (
+          <div className="space-y-2">
+            {cart.map((item) => (
+              <div key={item.product_id} className="border border-gray-200 rounded-md px-3 py-2">
+                <div className="flex justify-between gap-2">
+                  <Text strong className="truncate">{item.product_name}</Text>
+                  <Text>{displayPrice(item.unit_price_usd * item.quantity)}</Text>
+                </div>
+                <div className="flex items-center justify-between mt-1">
+                  <Text type="secondary" className="text-xs">{displayPrice(item.unit_price_usd)} each</Text>
+                  <Space size={4}>
+                    <Button size="small" icon={<MinusOutlined />} onClick={() => updateQty(item.product_id, -1)} />
+                    <Text>{item.quantity}</Text>
+                    <Button size="small" icon={<PlusOutlined />} onClick={() => updateQty(item.product_id, 1)} />
+                    <Button size="small" danger icon={<DeleteOutlined />} onClick={() => removeItem(item.product_id)} />
+                  </Space>
+                </div>
               </div>
-              <div className="flex items-center justify-between mt-1">
-                <Text type="secondary" className="text-xs">{displayPrice(item.unit_price_usd)} each</Text>
-                <Space size={4}>
-                  <Button size="small" icon={<MinusOutlined />} onClick={() => updateQty(item.product_id, -1)} />
-                  <Text>{item.quantity}</Text>
-                  <Button size="small" icon={<PlusOutlined />} onClick={() => updateQty(item.product_id, 1)} />
-                  <Button size="small" danger icon={<DeleteOutlined />} onClick={() => removeItem(item.product_id)} />
-                </Space>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+            ))}
+          </div>
+        )}
+      </div>
 
       <Divider className="my-2" />
 
@@ -1029,9 +1037,6 @@ function Receipt({ sale, shopName }: { sale: Sale; shopName: string }) {
         <Text strong>Total (SSHL)</Text>
         <Text strong>{sale.total_sos.toLocaleString()} SSHL</Text>
       </div>
-      <Text type="secondary" className="text-xs block">
-        Rate: 1 USD = {sale.exchange_rate.toLocaleString()} SSHL
-      </Text>
 
       <Divider className="my-2" />
       <div className="text-center">
