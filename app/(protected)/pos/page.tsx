@@ -203,6 +203,10 @@ export default function POSPage() {
     () => cart.reduce((sum, item) => sum + item.unit_price_usd * item.quantity, 0),
     [cart]
   );
+  const customerById = useMemo(
+    () => new Map(customers.map((customer) => [customer.id, customer])),
+    [customers]
+  );
 
   const formatUsd = (usd: number) => `$${usd.toFixed(2)}`;
   const formatSshl = (usd: number, rate = exchangeRate) => `${(usd * rate).toLocaleString()} SSHL`;
@@ -446,18 +450,26 @@ export default function POSPage() {
               ) : (
                 <div className="space-y-2">
                   {recentOrders.map((order) => (
+                    (() => {
+                      const customer = order.customer_id ? customerById.get(order.customer_id) : undefined;
+                      const customerName = order.customer_name ?? customer?.name ?? "Walk-in";
+                      const customerPhone = customer?.phone?.trim() ? customer.phone : "";
+
+                      return (
                     <div
                       key={order.id}
                       className="cursor-pointer border border-gray-200 rounded-md px-3 py-2 flex items-start justify-between gap-3"
                       onClick={() => void loadOrderDetails(order.id)}
                     >
                       <div>
-                        <Text strong>Order #{order.id}</Text>
+                        <Text strong>{`Order #${order.id} ${customerName} ${customerPhone}`}</Text>
                         <Text className="block text-xs">{new Date(order.created_at).toLocaleString()}</Text>
                         <Text className="block text-xs">{formatUsd(order.total_usd)} / {order.total_sos.toLocaleString()} SSHL</Text>
                       </div>
                       {order.payment_status === "paid" ? <Tag color="green">Paid</Tag> : <Tag color="orange">Unpaid</Tag>}
                     </div>
+                      );
+                    })()
                   ))}
                 </div>
               )}
@@ -486,6 +498,12 @@ export default function POSPage() {
         ) : (
           <div className="space-y-2">
             {recentOrders.map((order) => (
+              (() => {
+                const customer = order.customer_id ? customerById.get(order.customer_id) : undefined;
+                const customerName = order.customer_name ?? customer?.name ?? "Walk-in";
+                const customerPhone = customer?.phone?.trim() ? customer.phone : "";
+
+                return (
               <div
                 key={order.id}
                 className="cursor-pointer border border-gray-200 rounded-md px-3 py-2 flex items-start justify-between gap-3"
@@ -495,11 +513,13 @@ export default function POSPage() {
                 }}
               >
                 <div>
-                  <Text strong>Order #{order.id}</Text>
+                  <Text strong>{`Order #${order.id} ${customerName} ${customerPhone}`}</Text>
                   <Text className="block text-xs">{formatUsd(order.total_usd)} / {order.total_sos.toLocaleString()} SSHL</Text>
                 </div>
                 {order.payment_status === "paid" ? <Tag color="green">Paid</Tag> : <Tag color="orange">Unpaid</Tag>}
               </div>
+                );
+              })()
             ))}
           </div>
         )}
