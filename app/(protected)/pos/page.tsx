@@ -616,7 +616,7 @@ export default function POSPage() {
         </Space>
       </header>
 
-      <main className="flex-1 min-h-0 overflow-hidden p-3 sm:p-4 md:pb-96 lg:pb-4">
+      <main className="flex-1 min-h-0 overflow-hidden p-3 sm:p-4 md:pb-[calc(46vh+5rem)] lg:pb-4">
         <Row gutter={[12, 12]} className="h-full min-h-0">
           <Col xs={24} lg={16} className="h-full min-h-0 flex flex-col gap-3 overflow-hidden">
             <Card size="small">
