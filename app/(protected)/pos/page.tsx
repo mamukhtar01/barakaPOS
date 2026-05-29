@@ -641,7 +641,11 @@ export default function POSPage() {
               </div>
             </Card>
 
-            <Card size="small" className="flex-1 min-h-0 overflow-hidden" styles={{ body: { height: "100%", minHeight: 0, overflowY: "auto" } }}>
+            <Card
+              size="small"
+              className="flex-1 min-h-0 overflow-hidden flex flex-col"
+              styles={{ body: { flex: 1, minHeight: 0, overflowY: "auto" } }}
+            >
               {loadingProducts ? (
                 <div className="py-20 text-center"><Spin /></div>
               ) : products.length === 0 ? (
