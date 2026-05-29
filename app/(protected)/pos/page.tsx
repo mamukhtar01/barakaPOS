@@ -587,7 +587,7 @@ export default function POSPage() {
             size="small"
             icon={<ClockCircleOutlined />}
             onClick={() => setOrdersDrawerOpen(true)}
-            className="md:hidden"
+            className="lg:hidden"
           />
           <Segmented
             options={CURRENCY_OPTIONS}
@@ -605,7 +605,7 @@ export default function POSPage() {
         </Space>
       </header>
 
-      <main className="flex-1 overflow-hidden p-3 sm:p-4">
+      <main className="flex-1 overflow-hidden p-3 sm:p-4 md:pb-96 lg:pb-4">
         <Row gutter={[12, 12]} className="h-full">
           <Col xs={24} lg={16} className="h-full flex flex-col gap-3 overflow-hidden">
             <Card size="small">
@@ -665,12 +665,12 @@ export default function POSPage() {
             </Card>
           </Col>
 
-          <Col xs={24} lg={8} className="h-full hidden md:flex flex-col gap-3 min-h-0">
+          <Col xs={24} lg={8} className="h-full hidden lg:flex flex-col gap-3 min-h-0">
             <Card
               title={`Cart (${cartCount})`}
               size="small"
               className="shrink-0"
-              styles={{ body: { paddingTop: 12, maxHeight: "44vh", display: "flex", flexDirection: "column", minHeight: 0 } }}
+              styles={{ body: { paddingTop: 12, maxHeight: "52vh", display: "flex", flexDirection: "column", minHeight: 0 } }}
             >
               <CartPanel
                 cart={cart}
@@ -718,6 +718,40 @@ export default function POSPage() {
           </Col>
         </Row>
       </main>
+
+      <div className="hidden md:block lg:hidden fixed inset-x-0 bottom-0 z-20 px-3 pb-3">
+        <Card
+          title={`Cart (${cartCount})`}
+          size="small"
+          className="shadow-lg"
+          styles={{ body: { paddingTop: 12, maxHeight: "46vh", minHeight: 300, display: "flex", flexDirection: "column" } }}
+        >
+          <CartPanel
+            cart={cart}
+            cartCount={cartCount}
+            cartTotalUsd={cartTotalUsd}
+            editingOrderId={editingOrderId}
+            displayPrice={displayPrice}
+            formatUsd={formatUsd}
+            formatSshl={formatSshl}
+            updateQty={updateQty}
+            removeItem={removeItem}
+            clearCart={clearCart}
+            checkoutLoading={savingOrderItemsId === editingOrderId && editingOrderId !== null}
+            onCancelEditOrder={() => {
+              setEditingOrderId(null);
+              setCart([]);
+            }}
+            onCheckout={() => {
+              if (editingOrderId) {
+                void saveEditingOrderFromCart();
+                return;
+              }
+              handleCheckout();
+            }}
+          />
+        </Card>
+      </div>
 
       <div className="md:hidden fixed right-4 bottom-4 z-20">
         <Badge count={cartCount}>
