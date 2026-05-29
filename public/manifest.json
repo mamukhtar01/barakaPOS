@@ -1,6 +1,9 @@
 {
-  "name": "Your App Name",
-  "short_name": "Your App",
+  "name": "Baraka POS",
+  "short_name": "BarakaPOS",
+  "description": "Point of Sale system for Baraka Cafe",
+  "start_url": "/",
+  "scope": "/",
   "icons": [
     {
       "src": "/android-chrome-192x192.png",
@@ -11,9 +14,15 @@
       "src": "/android-chrome-512x512.png",
       "sizes": "512x512",
       "type": "image/png"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
     }
   ],
-  "theme_color": "#ffffff",
+  "theme_color": "#15803d",
   "background_color": "#ffffff",
-  "display": "standalone"
+  "display": "standalone",
+  "orientation": "portrait"
 }
