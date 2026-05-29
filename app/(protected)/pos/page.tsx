@@ -20,6 +20,7 @@ import {
   Select,
   Space,
   Spin,
+  Tabs,
   Tag,
   Typography,
 } from "antd";
@@ -95,6 +96,7 @@ export default function POSPage() {
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
   const [ordersDrawerOpen, setOrdersDrawerOpen] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [checkoutTabKey, setCheckoutTabKey] = useState<"checkout" | "details">("checkout");
   const [receiptOpen, setReceiptOpen] = useState(false);
   const [customerQuickOpen, setCustomerQuickOpen] = useState(false);
 
@@ -259,6 +261,7 @@ export default function POSPage() {
       discount: 0,
       notes: "",
     });
+    setCheckoutTabKey("checkout");
     setCheckoutOpen(true);
   };
 
@@ -818,93 +821,174 @@ export default function POSPage() {
       <Modal
         title="Place order"
         open={checkoutOpen}
-        onCancel={() => setCheckoutOpen(false)}
+        onCancel={() => {
+          setCheckoutOpen(false);
+          setCheckoutTabKey("checkout");
+        }}
         footer={null}
         width={560}
       >
         <Form form={checkoutForm} layout="vertical" onFinish={onCheckoutSubmit}>
-          <div className="p-3 rounded bg-gray-50 mb-3">
-            <Text className="block">Subtotal: <strong>{formatUsd(cartTotalUsd)}</strong></Text>
-            <Text className="block">Subtotal (SSHL): <strong>{formatSshl(cartTotalUsd)}</strong></Text>
-          </div>
+          <Tabs
+            activeKey={checkoutTabKey}
+            onChange={(key) => setCheckoutTabKey(key as "checkout" | "details")}
+            items={[
+              {
+                key: "checkout",
+                label: "Checkout form",
+                children: (
+                  <>
+                    <div className="p-3 rounded bg-gray-50 mb-3">
+                      <Text className="block">Subtotal: <strong>{formatUsd(cartTotalUsd)}</strong></Text>
+                      <Text className="block">Subtotal (SSHL): <strong>{formatSshl(cartTotalUsd)}</strong></Text>
+                    </div>
 
-          <Form.Item name="customer_id" label="Customer">
-            <Select
-              allowClear
-              showSearch
-              optionFilterProp="label"
-              placeholder="Select customer"
-              options={customers.map((customer) => ({
-                value: customer.id,
-                label: `${customer.name}${customer.phone ? ` — ${customer.phone}` : ""}`,
-              }))}
-            />
-          </Form.Item>
+                    <Form.Item name="customer_id" label="Customer">
+                      <Select
+                        allowClear
+                        showSearch
+                        optionFilterProp="label"
+                        placeholder="Select customer"
+                        options={customers.map((customer) => ({
+                          value: customer.id,
+                          label: `${customer.name}${customer.phone ? ` — ${customer.phone}` : ""}`,
+                        }))}
+                      />
+                    </Form.Item>
 
-          <Button icon={<UserAddOutlined />} className="mb-3" onClick={() => setCustomerQuickOpen(true)}>
-            Create new customer
-          </Button>
+                    <Button icon={<UserAddOutlined />} className="mb-3" onClick={() => setCustomerQuickOpen(true)}>
+                      Create new customer
+                    </Button>
 
-          <Form.Item name="currency" label="Payment currency" rules={[{ required: true }]}>
-            <Segmented options={CURRENCY_OPTIONS} block />
-          </Form.Item>
+                    <Form.Item name="currency" label="Payment currency" rules={[{ required: true }]}>
+                      <Segmented options={CURRENCY_OPTIONS} block />
+                    </Form.Item>
 
-          <Form.Item name="payment_method" label="Payment method" rules={[{ required: true }]}>
-            <Segmented
-              options={[
-                { label: "Cash", value: "cash" },
-                { label: "Mobile", value: "mobile" },
-                { label: "Card", value: "card" },
-              ]}
-              block
-            />
-          </Form.Item>
+                    <Form.Item name="payment_method" label="Payment method" rules={[{ required: true }]}>
+                      <Segmented
+                        options={[
+                          { label: "Cash", value: "cash" },
+                          { label: "Mobile", value: "mobile" },
+                          { label: "Card", value: "card" },
+                        ]}
+                        block
+                      />
+                    </Form.Item>
 
-          <Form.Item name="discount" label="Discount (USD)">
-            <Space.Compact block className="w-full">
-              <span className="inline-flex items-center rounded-l-md border border-r-0 border-gray-300 bg-gray-50 px-3 text-sm text-gray-600">
-                $
-              </span>
-              <InputNumber min={0} max={cartTotalUsd} className="w-full" step={0.5} />
-            </Space.Compact>
-          </Form.Item>
+                    <Form.Item name="discount" label="Discount (USD)">
+                      <Space.Compact block className="w-full">
+                        <span className="inline-flex items-center rounded-l-md border border-r-0 border-gray-300 bg-gray-50 px-3 text-sm text-gray-600">
+                          $
+                        </span>
+                        <InputNumber min={0} max={cartTotalUsd} className="w-full" step={0.5} />
+                      </Space.Compact>
+                    </Form.Item>
 
-          <Form.Item name="notes" label="Notes">
-            <Input.TextArea rows={2} placeholder="Optional note" />
-          </Form.Item>
+                    <Form.Item name="notes" label="Notes">
+                      <Input.TextArea rows={2} placeholder="Optional note" />
+                    </Form.Item>
 
-          <Form.Item noStyle shouldUpdate>
-            {() => {
-              const currency = checkoutForm.getFieldValue("currency") as Currency;
-              const discount = Number(checkoutForm.getFieldValue("discount") ?? 0);
-              const finalUsd = Math.max(0, cartTotalUsd - discount);
+                    <Form.Item noStyle shouldUpdate>
+                      {() => {
+                        const currency = checkoutForm.getFieldValue("currency") as Currency;
+                        const discount = Number(checkoutForm.getFieldValue("discount") ?? 0);
+                        const finalUsd = Math.max(0, cartTotalUsd - discount);
 
-              return (
-                <Card size="small" className="mb-3 bg-green-50">
-                  <Text className="block">Collect now: <strong>{currency === "USD" ? formatUsd(finalUsd) : formatSshl(finalUsd)}</strong></Text>
-                  <Text type="secondary" className="text-xs">Equivalent: {formatUsd(finalUsd)} / {formatSshl(finalUsd)}</Text>
-                </Card>
-              );
-            }}
-          </Form.Item>
+                        return (
+                          <Card size="small" className="mb-3 bg-green-50">
+                            <Text className="block">Collect now: <strong>{currency === "USD" ? formatUsd(finalUsd) : formatSshl(finalUsd)}</strong></Text>
+                            <Text type="secondary" className="text-xs">Equivalent: {formatUsd(finalUsd)} / {formatSshl(finalUsd)}</Text>
+                          </Card>
+                        );
+                      }}
+                    </Form.Item>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            <Button
-              icon={<ClockCircleOutlined />}
-              loading={checkoutLoading && orderAction === "unpaid"}
-              onClick={() => void submitOrder("unpaid")}
-            >
-              Park as unpaid
-            </Button>
-            <Button
-              type="primary"
-              icon={<CheckCircleOutlined />}
-              loading={checkoutLoading && orderAction === "paid"}
-              onClick={() => void submitOrder("paid")}
-            >
-              Complete order
-            </Button>
-          </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <Button
+                        icon={<ClockCircleOutlined />}
+                        loading={checkoutLoading && orderAction === "unpaid"}
+                        onClick={() => void submitOrder("unpaid")}
+                      >
+                        Park as unpaid
+                      </Button>
+                      <Button
+                        type="primary"
+                        icon={<CheckCircleOutlined />}
+                        loading={checkoutLoading && orderAction === "paid"}
+                        onClick={() => void submitOrder("paid")}
+                      >
+                        Complete order
+                      </Button>
+                    </div>
+                  </>
+                ),
+              },
+              {
+                key: "details",
+                label: `Order details (${cartCount})`,
+                children: (
+                  <div className="space-y-3">
+                    {cart.length === 0 ? (
+                      <Empty description="No items in cart" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+                    ) : (
+                      <div className="max-h-72 overflow-y-auto pr-1 space-y-2">
+                        {cart.map((item) => {
+                          const lineUsd = item.unit_price_usd * item.quantity;
+                          return (
+                            <div key={`${item.product_id}-${item.product_name}`} className="rounded border border-black/10 px-3 py-2">
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                  <Text strong className="block truncate">{item.product_name}</Text>
+                                  <Text type="secondary" className="text-xs block">
+                                    {item.quantity} × {formatUsd(item.unit_price_usd)} ({formatSshl(item.unit_price_usd)})
+                                  </Text>
+                                </div>
+                                <div className="text-right shrink-0">
+                                  <Text strong className="block">{formatUsd(lineUsd)}</Text>
+                                  <Text type="secondary" className="text-xs">{formatSshl(lineUsd)}</Text>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    <Card size="small" className="bg-gray-50">
+                      <div className="flex items-center justify-between gap-2">
+                        <Text>Subtotal (USD)</Text>
+                        <Text strong>{formatUsd(cartTotalUsd)}</Text>
+                      </div>
+                      <div className="flex items-center justify-between gap-2">
+                        <Text type="secondary">Subtotal (SSHL)</Text>
+                        <Text>{formatSshl(cartTotalUsd)}</Text>
+                      </div>
+                      <Form.Item noStyle shouldUpdate>
+                        {() => {
+                          const discount = Number(checkoutForm.getFieldValue("discount") ?? 0);
+                          const finalUsd = Math.max(0, cartTotalUsd - discount);
+
+                          return (
+                            <>
+                              <Divider className="my-2" />
+                              <div className="flex items-center justify-between gap-2">
+                                <Text type="secondary">Discount</Text>
+                                <Text>{formatUsd(discount)} / {formatSshl(discount)}</Text>
+                              </div>
+                              <div className="flex items-center justify-between gap-2">
+                                <Text strong>Total due</Text>
+                                <Text strong>{formatUsd(finalUsd)} / {formatSshl(finalUsd)}</Text>
+                              </div>
+                            </>
+                          );
+                        }}
+                      </Form.Item>
+                    </Card>
+                  </div>
+                ),
+              },
+            ]}
+          />
         </Form>
       </Modal>
 
