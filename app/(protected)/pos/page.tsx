@@ -28,6 +28,7 @@ import {
   CheckCircleOutlined,
   ClockCircleOutlined,
   DeleteOutlined,
+  DownOutlined,
   DollarOutlined,
   LogoutOutlined,
   MinusOutlined,
@@ -36,6 +37,7 @@ import {
   SearchOutlined,
   SettingOutlined,
   ShoppingCartOutlined,
+  UpOutlined,
   UserAddOutlined,
 } from "@ant-design/icons";
 import { useAuth } from "@/components/ClientProvider";
@@ -179,6 +181,10 @@ export default function POSPage() {
       await fetchOrderDetails(id);
     }
   }, [expandedOrderId, orderDetailsById, fetchOrderDetails]);
+
+  const closeOrderDetails = useCallback(() => {
+    setExpandedOrderId(null);
+  }, []);
 
   useEffect(() => {
     void (async () => {
@@ -451,41 +457,57 @@ export default function POSPage() {
     await fetchRecentOrders();
   }, [editingOrderId, cart, message, orderDetailsById, fetchOrderDetails, updateUnpaidOrderItems, fetchRecentOrders]);
 
-  const renderOrderItem = (order: Sale) => {
+  const renderOrderItem = (order: Sale, inMobileDrawer = false) => {
     const customer = order.customer_id ? customerById.get(order.customer_id) : undefined;
     const customerName = order.customer_name ?? customer?.name ?? "Walk-in";
     const customerPhone = customer?.phone?.trim() ? customer.phone : "";
     const detail = orderDetailsById[order.id];
     const isExpanded = expandedOrderId === order.id;
     const isSavingItems = savingOrderItemsId === order.id;
-    const rowClassName = order.payment_status === "paid"
-      ? "border border-emerald-200 bg-emerald-50/40"
-      : "border border-amber-200 bg-amber-50/45";
+    const isPaid = order.payment_status === "paid";
+    const rowClassName = isPaid
+      ? "border-emerald-300 bg-emerald-50/45"
+      : "border-amber-300 bg-amber-50/55";
 
     return (
       <div
         key={order.id}
-        className={`rounded-md px-3 py-2 transition-colors ${rowClassName}`}
+        className={`rounded-lg border px-3 py-3 shadow-sm transition-all ${rowClassName} ${inMobileDrawer ? "mx-auto w-full max-w-3xl" : ""} ${isExpanded ? "ring-2 ring-green-500/30" : ""}`}
       >
-        <div
-          className="cursor-pointer flex items-start justify-between gap-3"
+        <button
+          type="button"
+          aria-expanded={isExpanded}
+          className="w-full text-left"
           onClick={() => void toggleOrderDetails(order.id)}
         >
-          <div>
-            <Text strong>{`Order #${order.id} ${customerName} ${customerPhone}`}</Text>
-            <Text className="block text-xs">{new Date(order.created_at).toLocaleString()}</Text>
-            <Text className="block text-xs">{formatUsd(order.total_usd)} / {order.total_sos.toLocaleString()} SSHL</Text>
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <Text strong className="text-base leading-tight truncate">
+                  {`Order #${order.id} ${customerName}${customerPhone ? ` • ${customerPhone}` : ""}`}
+                </Text>
+                <Tag color={isPaid ? "green" : "orange"}>{isPaid ? "Paid" : "Unpaid"}</Tag>
+                <Text type="secondary" className="text-xs">{isExpanded ? <UpOutlined /> : <DownOutlined />}</Text>
+              </div>
+              <Text type="secondary" className="block text-xs">
+                <ClockCircleOutlined className="mr-1" />
+                {new Date(order.created_at).toLocaleString()}
+              </Text>
+            </div>
+            <div className="shrink-0 text-right">
+              <Text strong className="block text-sm">{formatUsd(order.total_usd)}</Text>
+              <Text type="secondary" className="block text-xs">{order.total_sos.toLocaleString()} SSHL</Text>
+            </div>
           </div>
-          {order.payment_status === "paid" ? <Tag color="green">Paid</Tag> : <Tag color="orange">Unpaid</Tag>}
-        </div>
+        </button>
 
         {isExpanded ? (
-          <div className="mt-2 border-t border-gray-100 pt-2">
+          <div className="mt-3 border-t border-black/10 pt-3">
             {loadingOrderDetailsId === order.id ? (
               <div className="py-2"><Spin size="small" /></div>
             ) : detail ? (
               <>
-                <div className="flex items-center justify-end gap-2 mb-2">
+                <div className="mb-2 flex flex-wrap items-center justify-end gap-2">
                   {detail.payment_status === "unpaid" ? (
                     <Button
                       size="small"
@@ -530,9 +552,11 @@ export default function POSPage() {
                 ) : (
                   <div className="space-y-2">
                     {(detail.items ?? []).map((item, index) => (
-                      <div key={`${item.product_id ?? "na"}-${index}`} className="w-full flex justify-between gap-2 border-b border-gray-100 pb-2">
+                      <div key={`${item.product_id ?? "na"}-${index}`} className="w-full flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-black/5 pb-2 text-sm">
                         <Text>{item.product_name} × {item.quantity}</Text>
-                        <Text>{formatUsd(item.subtotal_usd)} / {item.subtotal_sos.toLocaleString()} SSHL</Text>
+                        <Text type="secondary">•</Text>
+                        <Text strong>{formatUsd(item.subtotal_usd)}</Text>
+                        <Text type="secondary">/ {item.subtotal_sos.toLocaleString()} SSHL</Text>
                       </div>
                     ))}
                   </div>
@@ -685,7 +709,7 @@ export default function POSPage() {
               ) : recentOrders.length === 0 ? (
                 <Empty description="No recent orders" />
               ) : (
-                <div className="space-y-2">
+                <div className="h-full overflow-y-auto pr-1 space-y-2">
                   {recentOrders.map((order) => renderOrderItem(order))}
                 </div>
               )}
@@ -703,9 +727,13 @@ export default function POSPage() {
       <Drawer
         title="Recent orders"
         placement="bottom"
-        size="large"
+        size="85%"
         open={ordersDrawerOpen}
-        onClose={() => setOrdersDrawerOpen(false)}
+        onClose={() => {
+          setOrdersDrawerOpen(false);
+          closeOrderDetails();
+        }}
+        styles={{ body: { display: "flex", flexDirection: "column", minHeight: 0 } }}
       >
         {loadingOrders ? (
           <div className="text-center py-10"><Spin /></div>
@@ -713,7 +741,7 @@ export default function POSPage() {
           <Empty description="No recent orders" />
         ) : (
           <div className="space-y-2 overflow-y-auto flex-1">
-            {recentOrders.map((order) => renderOrderItem(order))}
+            {recentOrders.map((order) => renderOrderItem(order, true))}
           </div>
         )}
       </Drawer>
