@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   App,
   Badge,
@@ -33,6 +33,7 @@ import {
   MinusOutlined,
   PlusOutlined,
   PrinterOutlined,
+  ReloadOutlined,
   SearchOutlined,
   SettingOutlined,
   ShoppingCartOutlined,
@@ -41,6 +42,7 @@ import {
 import { useAuth } from "@/components/ClientProvider";
 import { useRouter } from "next/navigation";
 import type { CartItem, Category, Currency, Customer, Product, Sale, SalePaymentStatus } from "@/lib/types";
+import { getCache, setCache, invalidateCache } from "@/lib/client-cache";
 
 const { Text } = Typography;
 
@@ -68,7 +70,7 @@ export default function POSPage() {
   const router = useRouter();
 
   const [categories, setCategories] = useState<Category[]>([]);
-  const [products, setProducts] = useState<Product[]>([]);
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [recentOrders, setRecentOrders] = useState<Sale[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<Sale | null>(null);
@@ -85,6 +87,10 @@ export default function POSPage() {
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [orderAction, setOrderAction] = useState<SalePaymentStatus>("paid");
 
+  // Stable ref so callbacks can read latest recentOrders without stale closure issues
+  const recentOrdersRef = useRef<Sale[]>(recentOrders);
+  recentOrdersRef.current = recentOrders;
+
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
   const [ordersDrawerOpen, setOrdersDrawerOpen] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
@@ -97,39 +103,59 @@ export default function POSPage() {
   const [quickCustomerForm] = Form.useForm();
 
   const fetchCategories = useCallback(async () => {
+    const cached = getCache<Category[]>("categories", 60 * 60 * 1000);
+    if (cached) { setCategories(cached); return; }
     const res = await fetch("/api/categories");
     if (!res.ok) return;
     const data = await res.json();
-    setCategories(data.categories ?? []);
+    const cats = (data.categories ?? []) as Category[];
+    setCategories(cats);
+    setCache("categories", cats);
   }, []);
 
-  const fetchProducts = useCallback(async () => {
+  /** Fetches all active products once and caches them locally.
+   *  Pass force=true (e.g. from the Refresh button) to bypass the cache. */
+  const fetchProducts = useCallback(async (force = false) => {
+    const cached = force ? null : getCache<Product[]>("products", 30 * 60 * 1000);
+    if (cached) { setAllProducts(cached); return; }
     setLoadingProducts(true);
-    const params = new URLSearchParams({ status: "active" });
-    if (selectedCategory) params.set("category_id", String(selectedCategory));
-    if (search.trim()) params.set("search", search.trim());
-
-    const res = await fetch(`/api/products?${params.toString()}`);
-    if (res.ok) {
-      const data = await res.json();
-      setProducts(data.products ?? []);
+    try {
+      const res = await fetch("/api/products?status=active");
+      if (res.ok) {
+        const data = await res.json();
+        const prods = (data.products ?? []) as Product[];
+        setAllProducts(prods);
+        setCache("products", prods);
+      }
+    } finally {
+      setLoadingProducts(false);
     }
-    setLoadingProducts(false);
-  }, [search, selectedCategory]);
+  }, []);
 
   const fetchCustomers = useCallback(async () => {
+    const cached = getCache<Customer[]>("customers", 5 * 60 * 1000);
+    if (cached) { setCustomers(cached); return; }
     const res = await fetch("/api/customers");
     if (!res.ok) return;
     const data = await res.json();
-    setCustomers(data.customers ?? []);
+    const custs = (data.customers ?? []) as Customer[];
+    setCustomers(custs);
+    setCache("customers", custs);
   }, []);
 
   const fetchSettings = useCallback(async () => {
+    const cached = getCache<Record<string, string>>("settings", 30 * 60 * 1000);
+    if (cached) {
+      if (cached.exchange_rate) setExchangeRate(Number(cached.exchange_rate));
+      if (cached.shop_name) setShopName(cached.shop_name);
+      return;
+    }
     const res = await fetch("/api/settings");
     if (!res.ok) return;
     const data = await res.json();
     if (data.settings?.exchange_rate) setExchangeRate(Number(data.settings.exchange_rate));
     if (data.settings?.shop_name) setShopName(data.settings.shop_name);
+    setCache("settings", data.settings ?? {});
   }, []);
 
   const fetchRecentOrders = useCallback(async () => {
@@ -143,27 +169,37 @@ export default function POSPage() {
   }, []);
 
   const loadOrderDetails = useCallback(async (id: number) => {
+    // Serve from in-memory cache when the full order (with items) is already loaded
+    const inMemory = recentOrdersRef.current.find((o) => o.id === id);
+    if (inMemory?.items) {
+      setSelectedOrder(inMemory);
+      setOrderDetailsOpen(true);
+      return;
+    }
     const res = await fetch(`/api/sales/${id}`);
     if (!res.ok) {
       message.error("Failed to load order details");
       return;
     }
     const data = await res.json();
-    setSelectedOrder(normalizeSale(data.sale));
+    const sale = normalizeSale(data.sale);
+    setSelectedOrder(sale);
+    // Cache the fully-loaded sale back so subsequent opens are instant
+    setRecentOrders((prev) => prev.map((o) => (o.id === id ? sale : o)));
     setOrderDetailsOpen(true);
   }, [message]);
 
   useEffect(() => {
     void (async () => {
-      await Promise.all([fetchCategories(), fetchCustomers(), fetchSettings(), fetchRecentOrders()]);
+      await Promise.all([
+        fetchCategories(),
+        fetchCustomers(),
+        fetchSettings(),
+        fetchRecentOrders(),
+        fetchProducts(),
+      ]);
     })();
-  }, [fetchCategories, fetchCustomers, fetchSettings, fetchRecentOrders]);
-
-  useEffect(() => {
-    void (async () => {
-      await fetchProducts();
-    })();
-  }, [fetchProducts]);
+  }, [fetchCategories, fetchCustomers, fetchSettings, fetchRecentOrders, fetchProducts]);
 
   const addToCart = (product: Product) => {
     setCart((prev) => {
@@ -203,6 +239,19 @@ export default function POSPage() {
     () => cart.reduce((sum, item) => sum + item.unit_price_usd * item.quantity, 0),
     [cart]
   );
+
+  /** Products filtered locally — zero network calls on search/category change */
+  const filteredProducts = useMemo(() => {
+    let result = allProducts;
+    if (selectedCategory !== null) {
+      result = result.filter((p) => p.category_id === selectedCategory);
+    }
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      result = result.filter((p) => p.name.toLowerCase().includes(q));
+    }
+    return result;
+  }, [allProducts, selectedCategory, search]);
 
   const formatUsd = (usd: number) => `$${usd.toFixed(2)}`;
   const formatSshl = (usd: number, rate = exchangeRate) => `${(usd * rate).toLocaleString()} SSHL`;
@@ -275,7 +324,8 @@ export default function POSPage() {
       setCheckoutOpen(false);
       setCart([]);
       setReceiptOpen(true);
-      await fetchRecentOrders();
+      // Prepend to recent orders without a network round-trip
+      setRecentOrders((prev) => [sale, ...prev].slice(0, 12));
       message.success(orderAction === "paid" ? "Order completed" : "Order parked as unpaid");
     } catch {
       message.error("Network error while placing order");
@@ -298,8 +348,11 @@ export default function POSPage() {
       return;
     }
 
-    await fetchCustomers();
-    checkoutForm.setFieldValue("customer_id", data.customer.id);
+    const newCustomer = data.customer as Customer;
+    const updatedCustomers = [...customers, newCustomer].sort((a, b) => a.name.localeCompare(b.name));
+    setCustomers(updatedCustomers);
+    setCache("customers", updatedCustomers);
+    checkoutForm.setFieldValue("customer_id", newCustomer.id);
     setCustomerQuickOpen(false);
     quickCustomerForm.resetFields();
     message.success("Customer created");
@@ -319,8 +372,13 @@ export default function POSPage() {
     }
 
     message.success("Order marked as paid");
-    await fetchRecentOrders();
-    await loadOrderDetails(id);
+    // Update both lists in-place — no network round-trip needed
+    setRecentOrders((prev) =>
+      prev.map((o) => (o.id === id ? { ...o, payment_status: "paid" as SalePaymentStatus } : o))
+    );
+    setSelectedOrder((prev) =>
+      prev?.id === id ? { ...prev, payment_status: "paid" as SalePaymentStatus } : prev
+    );
   };
 
   const handlePrint = () => window.print();
@@ -378,17 +436,26 @@ export default function POSPage() {
                   onChange={(value) => setSelectedCategory(value ?? null)}
                   options={categories.map((cat) => ({ value: cat.id, label: cat.name }))}
                 />
+
+                <Button
+                  icon={<ReloadOutlined />}
+                  title="Refresh products"
+                  onClick={() => {
+                    invalidateCache("products");
+                    void fetchProducts(true);
+                  }}
+                />
               </div>
             </Card>
 
             <Card size="small" className="flex-1 overflow-hidden" styles={{ body: { height: "100%", overflowY: "auto" } }}>
               {loadingProducts ? (
                 <div className="py-20 text-center"><Spin /></div>
-              ) : products.length === 0 ? (
+              ) : filteredProducts.length === 0 ? (
                 <Empty description="No products found" />
               ) : (
                 <Row gutter={[10, 10]}>
-                  {products.map((product) => {
+                  {filteredProducts.map((product) => {
                     const image = getProductImage(product);
                     return (
                       <Col key={product.id} xs={12} sm={8} md={6}>

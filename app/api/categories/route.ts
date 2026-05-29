@@ -7,7 +7,9 @@ export async function GET() {
   const session = await getSession();
   if (!session) return Response.json({ error: "Unauthorized" }, { status: 401 });
   const { rows } = await db.execute("SELECT * FROM categories ORDER BY name ASC");
-  return Response.json({ categories: rows });
+  return Response.json({ categories: rows }, {
+    headers: { "Cache-Control": "private, max-age=300, stale-while-revalidate=3600" },
+  });
 }
 
 export async function POST(request: NextRequest) {
