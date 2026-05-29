@@ -69,11 +69,14 @@ export default function POSPage() {
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [orderEditProducts, setOrderEditProducts] = useState<Product[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [recentOrders, setRecentOrders] = useState<Sale[]>([]);
   const [expandedOrderId, setExpandedOrderId] = useState<number | null>(null);
   const [loadingOrderDetailsId, setLoadingOrderDetailsId] = useState<number | null>(null);
+  const [savingOrderItemsId, setSavingOrderItemsId] = useState<number | null>(null);
   const [orderDetailsById, setOrderDetailsById] = useState<Record<number, Sale>>({});
+  const [editingOrderId, setEditingOrderId] = useState<number | null>(null);
 
   const [cart, setCart] = useState<CartItem[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
@@ -117,6 +120,13 @@ export default function POSPage() {
     }
     setLoadingProducts(false);
   }, [search, selectedCategory]);
+
+  const fetchOrderEditProducts = useCallback(async () => {
+    const res = await fetch("/api/products?status=active");
+    if (!res.ok) return;
+    const data = await res.json();
+    setOrderEditProducts(data.products ?? []);
+  }, []);
 
   const fetchCustomers = useCallback(async () => {
     const res = await fetch("/api/customers");
@@ -172,9 +182,9 @@ export default function POSPage() {
 
   useEffect(() => {
     void (async () => {
-      await Promise.all([fetchCategories(), fetchCustomers(), fetchSettings(), fetchRecentOrders()]);
+      await Promise.all([fetchCategories(), fetchCustomers(), fetchSettings(), fetchRecentOrders(), fetchOrderEditProducts()]);
     })();
-  }, [fetchCategories, fetchCustomers, fetchSettings, fetchRecentOrders]);
+  }, [fetchCategories, fetchCustomers, fetchSettings, fetchRecentOrders, fetchOrderEditProducts]);
 
   useEffect(() => {
     void (async () => {
@@ -261,7 +271,7 @@ export default function POSPage() {
   }) => {
     setCheckoutLoading(true);
 
-    const rate = values.currency === "SSHL" ? exchangeRate : 1;
+    const rate = exchangeRate;
     const notes = values.notes?.trim() ? values.notes.trim() : null;
 
     try {
@@ -344,12 +354,110 @@ export default function POSPage() {
     await fetchOrderDetails(id);
   };
 
+  const startEditingOrder = useCallback(async (id: number) => {
+    const detail = orderDetailsById[id] ?? await fetchOrderDetails(id);
+    if (!detail) return;
+
+    if (detail.payment_status !== "unpaid") {
+      message.warning("Only unpaid orders can be updated");
+      return;
+    }
+
+    const productById = new Map(
+      [...orderEditProducts, ...products].map((product) => [product.id, product])
+    );
+
+    const nextCart: CartItem[] = (detail.items ?? []).map((item, index) => {
+      const fallbackId = -(index + 1);
+      const safeProductId = item.product_id ?? fallbackId;
+      const sourceProduct = item.product_id ? productById.get(item.product_id) : undefined;
+
+      return {
+        product_id: safeProductId,
+        product_name: item.product_name,
+        unit_price_usd: Number(item.unit_price_usd),
+        quantity: Number(item.quantity),
+        image_url: sourceProduct ? (getProductImage(sourceProduct) ?? null) : null,
+      };
+    });
+
+    setCart(nextCart);
+    setEditingOrderId(id);
+    setOrdersDrawerOpen(false);
+    message.success(`Order #${id} loaded into cart`);
+  }, [orderDetailsById, fetchOrderDetails, message, orderEditProducts, products]);
+
+  const updateUnpaidOrderItems = useCallback(async (id: number, nextItems: Sale["items"]) => {
+    if (!nextItems || nextItems.length === 0) {
+      message.warning("Order must contain at least one item");
+      return;
+    }
+
+    setSavingOrderItemsId(id);
+    const res = await fetch(`/api/sales/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        items: nextItems.map((item) => ({
+          product_id: item.product_id,
+          product_name: item.product_name,
+          quantity: item.quantity,
+          unit_price_usd: item.unit_price_usd,
+        })),
+      }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      message.error(data.error ?? "Failed to update order items");
+      setSavingOrderItemsId(null);
+      return;
+    }
+
+    const updatedSale = normalizeSale(data.sale as Sale);
+    setOrderDetailsById((prev) => ({ ...prev, [id]: updatedSale }));
+    setRecentOrders((prev) =>
+      prev.map((order) => (order.id === id ? normalizeSale({ ...order, ...updatedSale }) : order))
+    );
+    setSavingOrderItemsId(null);
+    message.success("Order updated");
+  }, [message]);
+
+  const saveEditingOrderFromCart = useCallback(async () => {
+    if (!editingOrderId) return;
+    if (cart.length === 0) {
+      message.warning("Order must contain at least one item");
+      return;
+    }
+
+    const detail = orderDetailsById[editingOrderId] ?? await fetchOrderDetails(editingOrderId);
+    if (!detail) return;
+
+    const nextItems = cart.map((item) => ({
+      id: 0,
+      sale_id: editingOrderId,
+      product_id: item.product_id > 0 ? item.product_id : null,
+      product_name: item.product_name,
+      quantity: item.quantity,
+      unit_price_usd: item.unit_price_usd,
+      unit_price_sos: item.unit_price_usd * detail.exchange_rate,
+      subtotal_usd: item.unit_price_usd * item.quantity,
+      subtotal_sos: item.unit_price_usd * detail.exchange_rate * item.quantity,
+    }));
+
+    await updateUnpaidOrderItems(editingOrderId, nextItems);
+    setEditingOrderId(null);
+    setCart([]);
+    await fetchRecentOrders();
+  }, [editingOrderId, cart, message, orderDetailsById, fetchOrderDetails, updateUnpaidOrderItems, fetchRecentOrders]);
+
   const renderOrderItem = (order: Sale) => {
     const customer = order.customer_id ? customerById.get(order.customer_id) : undefined;
     const customerName = order.customer_name ?? customer?.name ?? "Walk-in";
     const customerPhone = customer?.phone?.trim() ? customer.phone : "";
     const detail = orderDetailsById[order.id];
     const isExpanded = expandedOrderId === order.id;
+    const isSavingItems = savingOrderItemsId === order.id;
 
     return (
       <div
@@ -378,7 +486,20 @@ export default function POSPage() {
                   {detail.payment_status === "unpaid" ? (
                     <Button
                       size="small"
+                      loading={isSavingItems}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        void startEditingOrder(order.id);
+                      }}
+                    >
+                      Update order
+                    </Button>
+                  ) : null}
+                  {detail.payment_status === "unpaid" ? (
+                    <Button
+                      size="small"
                       type="primary"
+                      loading={isSavingItems}
                       onClick={(event) => {
                         event.stopPropagation();
                         void markOrderPaid(order.id);
@@ -390,6 +511,7 @@ export default function POSPage() {
                   <Button
                     size="small"
                     icon={<PrinterOutlined />}
+                    disabled={isSavingItems}
                     onClick={(event) => {
                       event.stopPropagation();
                       setLastSale(detail);
@@ -521,13 +643,25 @@ export default function POSPage() {
                 cart={cart}
                 cartCount={cartCount}
                 cartTotalUsd={cartTotalUsd}
+                editingOrderId={editingOrderId}
                 displayPrice={displayPrice}
                 formatUsd={formatUsd}
                 formatSshl={formatSshl}
                 updateQty={updateQty}
                 removeItem={removeItem}
                 clearCart={clearCart}
-                onCheckout={handleCheckout}
+                checkoutLoading={savingOrderItemsId === editingOrderId && editingOrderId !== null}
+                onCancelEditOrder={() => {
+                  setEditingOrderId(null);
+                  setCart([]);
+                }}
+                onCheckout={() => {
+                  if (editingOrderId) {
+                    void saveEditingOrderFromCart();
+                    return;
+                  }
+                  handleCheckout();
+                }}
               />
             </Card>
 
@@ -586,14 +720,24 @@ export default function POSPage() {
           cart={cart}
           cartCount={cartCount}
           cartTotalUsd={cartTotalUsd}
+          editingOrderId={editingOrderId}
           displayPrice={displayPrice}
           formatUsd={formatUsd}
           formatSshl={formatSshl}
           updateQty={updateQty}
           removeItem={removeItem}
           clearCart={clearCart}
+          checkoutLoading={savingOrderItemsId === editingOrderId && editingOrderId !== null}
+          onCancelEditOrder={() => {
+            setEditingOrderId(null);
+            setCart([]);
+          }}
           onCheckout={() => {
             setCartDrawerOpen(false);
+            if (editingOrderId) {
+              void saveEditingOrderFromCart();
+              return;
+            }
             handleCheckout();
           }}
         />
@@ -732,27 +876,44 @@ function CartPanel({
   cart,
   cartCount,
   cartTotalUsd,
+  editingOrderId,
   displayPrice,
   formatUsd,
   formatSshl,
   updateQty,
   removeItem,
   clearCart,
+  checkoutLoading,
+  onCancelEditOrder,
   onCheckout,
 }: {
   cart: CartItem[];
   cartCount: number;
   cartTotalUsd: number;
+  editingOrderId: number | null;
   displayPrice: (usd: number) => string;
   formatUsd: (usd: number) => string;
   formatSshl: (usd: number) => string;
   updateQty: (id: number, delta: number) => void;
   removeItem: (id: number) => void;
   clearCart: () => void;
+  checkoutLoading: boolean;
+  onCancelEditOrder: () => void;
   onCheckout: () => void;
 }) {
   return (
     <div className="space-y-3">
+      {editingOrderId ? (
+        <div className="rounded-md border border-blue-200 bg-blue-50 px-3 py-2">
+          <Text strong>{`Updating Order #${editingOrderId}`}</Text>
+          <div>
+            <Button size="small" type="link" className="px-0!" onClick={onCancelEditOrder}>
+              Cancel update
+            </Button>
+          </div>
+        </div>
+      ) : null}
+
       <div className="flex justify-between items-center">
         <Text strong>{cartCount} items</Text>
         <Button size="small" danger disabled={cart.length === 0} onClick={clearCart} icon={<DeleteOutlined />}>
@@ -791,8 +952,16 @@ function CartPanel({
         <Text className="block">Total SSHL: <strong>{formatSshl(cartTotalUsd)}</strong></Text>
       </Card>
 
-      <Button type="primary" block size="large" icon={<DollarOutlined />} disabled={cart.length === 0} onClick={onCheckout}>
-        Place order
+      <Button
+        type="primary"
+        block
+        size="large"
+        icon={<DollarOutlined />}
+        disabled={cart.length === 0}
+        loading={checkoutLoading}
+        onClick={onCheckout}
+      >
+        {editingOrderId ? "Save order updates" : "Place order"}
       </Button>
     </div>
   );

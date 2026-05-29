@@ -55,7 +55,15 @@ export async function POST(request: NextRequest) {
     return Response.json({ error: "No items in sale" }, { status: 400 });
   }
 
-  const rate = Number(exchange_rate ?? 1);
+  const requestedRate = Number(exchange_rate ?? 0);
+  let rate = Number.isFinite(requestedRate) && requestedRate > 1 ? requestedRate : 0;
+  if (rate <= 1) {
+    const settingsRate = await db.execute({
+      sql: "SELECT value FROM settings WHERE key = 'exchange_rate' LIMIT 1",
+    });
+    const fallbackRate = Number(settingsRate.rows[0]?.value ?? 28000);
+    rate = Number.isFinite(fallbackRate) && fallbackRate > 1 ? fallbackRate : 28000;
+  }
   let total_usd = 0;
 
   for (const item of items) {
