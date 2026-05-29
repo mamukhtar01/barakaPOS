@@ -71,7 +71,9 @@ export default function POSPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [recentOrders, setRecentOrders] = useState<Sale[]>([]);
-  const [selectedOrder, setSelectedOrder] = useState<Sale | null>(null);
+  const [expandedOrderId, setExpandedOrderId] = useState<number | null>(null);
+  const [loadingOrderDetailsId, setLoadingOrderDetailsId] = useState<number | null>(null);
+  const [orderDetailsById, setOrderDetailsById] = useState<Record<number, Sale>>({});
 
   const [cart, setCart] = useState<CartItem[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
@@ -89,7 +91,6 @@ export default function POSPage() {
   const [ordersDrawerOpen, setOrdersDrawerOpen] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [receiptOpen, setReceiptOpen] = useState(false);
-  const [orderDetailsOpen, setOrderDetailsOpen] = useState(false);
   const [customerQuickOpen, setCustomerQuickOpen] = useState(false);
 
   const [lastSale, setLastSale] = useState<Sale | null>(null);
@@ -142,16 +143,32 @@ export default function POSPage() {
     setLoadingOrders(false);
   }, []);
 
-  const loadOrderDetails = useCallback(async (id: number) => {
+  const fetchOrderDetails = useCallback(async (id: number): Promise<Sale | null> => {
+    setLoadingOrderDetailsId(id);
     const res = await fetch(`/api/sales/${id}`);
     if (!res.ok) {
       message.error("Failed to load order details");
-      return;
+      setLoadingOrderDetailsId(null);
+      return null;
     }
     const data = await res.json();
-    setSelectedOrder(normalizeSale(data.sale));
-    setOrderDetailsOpen(true);
+    const normalizedSale = normalizeSale(data.sale);
+    setOrderDetailsById((prev) => ({ ...prev, [id]: normalizedSale }));
+    setLoadingOrderDetailsId(null);
+    return normalizedSale;
   }, [message]);
+
+  const toggleOrderDetails = useCallback(async (id: number) => {
+    if (expandedOrderId === id) {
+      setExpandedOrderId(null);
+      return;
+    }
+
+    setExpandedOrderId(id);
+    if (!orderDetailsById[id]) {
+      await fetchOrderDetails(id);
+    }
+  }, [expandedOrderId, orderDetailsById, fetchOrderDetails]);
 
   useEffect(() => {
     void (async () => {
@@ -324,7 +341,85 @@ export default function POSPage() {
 
     message.success("Order marked as paid");
     await fetchRecentOrders();
-    await loadOrderDetails(id);
+    await fetchOrderDetails(id);
+  };
+
+  const renderOrderItem = (order: Sale) => {
+    const customer = order.customer_id ? customerById.get(order.customer_id) : undefined;
+    const customerName = order.customer_name ?? customer?.name ?? "Walk-in";
+    const customerPhone = customer?.phone?.trim() ? customer.phone : "";
+    const detail = orderDetailsById[order.id];
+    const isExpanded = expandedOrderId === order.id;
+
+    return (
+      <div
+        key={order.id}
+        className="border border-gray-200 rounded-md px-3 py-2"
+      >
+        <div
+          className="cursor-pointer flex items-start justify-between gap-3"
+          onClick={() => void toggleOrderDetails(order.id)}
+        >
+          <div>
+            <Text strong>{`Order #${order.id} ${customerName} ${customerPhone}`}</Text>
+            <Text className="block text-xs">{new Date(order.created_at).toLocaleString()}</Text>
+            <Text className="block text-xs">{formatUsd(order.total_usd)} / {order.total_sos.toLocaleString()} SSHL</Text>
+          </div>
+          {order.payment_status === "paid" ? <Tag color="green">Paid</Tag> : <Tag color="orange">Unpaid</Tag>}
+        </div>
+
+        {isExpanded ? (
+          <div className="mt-2 border-t border-gray-100 pt-2">
+            {loadingOrderDetailsId === order.id ? (
+              <div className="py-2"><Spin size="small" /></div>
+            ) : detail ? (
+              <>
+                <div className="flex items-center justify-end gap-2 mb-2">
+                  {detail.payment_status === "unpaid" ? (
+                    <Button
+                      size="small"
+                      type="primary"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        void markOrderPaid(order.id);
+                      }}
+                    >
+                      Mark as paid
+                    </Button>
+                  ) : null}
+                  <Button
+                    size="small"
+                    icon={<PrinterOutlined />}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setLastSale(detail);
+                      setReceiptOpen(true);
+                    }}
+                  >
+                    Print slip
+                  </Button>
+                </div>
+
+                {(detail.items ?? []).length === 0 ? (
+                  <Empty description="No items in this order" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+                ) : (
+                  <div className="space-y-2">
+                    {(detail.items ?? []).map((item, index) => (
+                      <div key={`${item.product_id ?? "na"}-${index}`} className="w-full flex justify-between gap-2 border-b border-gray-100 pb-2">
+                        <Text>{item.product_name} × {item.quantity}</Text>
+                        <Text>{formatUsd(item.subtotal_usd)} / {item.subtotal_sos.toLocaleString()} SSHL</Text>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            ) : (
+              <Text type="secondary" className="text-xs">No order details available</Text>
+            )}
+          </div>
+        ) : null}
+      </div>
+    );
   };
 
   const handlePrint = () => window.print();
@@ -449,28 +544,7 @@ export default function POSPage() {
                 <Empty description="No recent orders" />
               ) : (
                 <div className="space-y-2">
-                  {recentOrders.map((order) => (
-                    (() => {
-                      const customer = order.customer_id ? customerById.get(order.customer_id) : undefined;
-                      const customerName = order.customer_name ?? customer?.name ?? "Walk-in";
-                      const customerPhone = customer?.phone?.trim() ? customer.phone : "";
-
-                      return (
-                    <div
-                      key={order.id}
-                      className="cursor-pointer border border-gray-200 rounded-md px-3 py-2 flex items-start justify-between gap-3"
-                      onClick={() => void loadOrderDetails(order.id)}
-                    >
-                      <div>
-                        <Text strong>{`Order #${order.id} ${customerName} ${customerPhone}`}</Text>
-                        <Text className="block text-xs">{new Date(order.created_at).toLocaleString()}</Text>
-                        <Text className="block text-xs">{formatUsd(order.total_usd)} / {order.total_sos.toLocaleString()} SSHL</Text>
-                      </div>
-                      {order.payment_status === "paid" ? <Tag color="green">Paid</Tag> : <Tag color="orange">Unpaid</Tag>}
-                    </div>
-                      );
-                    })()
-                  ))}
+                  {recentOrders.map((order) => renderOrderItem(order))}
                 </div>
               )}
             </Card>
@@ -497,30 +571,7 @@ export default function POSPage() {
           <Empty description="No recent orders" />
         ) : (
           <div className="space-y-2">
-            {recentOrders.map((order) => (
-              (() => {
-                const customer = order.customer_id ? customerById.get(order.customer_id) : undefined;
-                const customerName = order.customer_name ?? customer?.name ?? "Walk-in";
-                const customerPhone = customer?.phone?.trim() ? customer.phone : "";
-
-                return (
-              <div
-                key={order.id}
-                className="cursor-pointer border border-gray-200 rounded-md px-3 py-2 flex items-start justify-between gap-3"
-                onClick={() => {
-                  setOrdersDrawerOpen(false);
-                  void loadOrderDetails(order.id);
-                }}
-              >
-                <div>
-                  <Text strong>{`Order #${order.id} ${customerName} ${customerPhone}`}</Text>
-                  <Text className="block text-xs">{formatUsd(order.total_usd)} / {order.total_sos.toLocaleString()} SSHL</Text>
-                </div>
-                {order.payment_status === "paid" ? <Tag color="green">Paid</Tag> : <Tag color="orange">Unpaid</Tag>}
-              </div>
-                );
-              })()
-            ))}
+            {recentOrders.map((order) => renderOrderItem(order))}
           </div>
         )}
       </Drawer>
@@ -659,50 +710,6 @@ export default function POSPage() {
             <Button block type="primary" htmlType="submit">Create</Button>
           </div>
         </Form>
-      </Modal>
-
-      <Modal
-        title="Order details"
-        open={orderDetailsOpen}
-        onCancel={() => setOrderDetailsOpen(false)}
-        footer={selectedOrder ? [
-          selectedOrder.payment_status === "unpaid" ? (
-            <Button key="mark-paid" type="primary" onClick={() => void markOrderPaid(selectedOrder.id)}>
-              Mark as paid
-            </Button>
-          ) : null,
-          <Button
-            key="print"
-            icon={<PrinterOutlined />}
-            onClick={() => {
-              setLastSale(selectedOrder);
-              setReceiptOpen(true);
-            }}
-          >
-            Print slip
-          </Button>,
-        ] : null}
-      >
-        {selectedOrder ? (
-          <div>
-            <Space className="mb-2">
-              <Tag>{selectedOrder.customer_name ?? "Walk-in"}</Tag>
-              {selectedOrder.payment_status === "paid" ? <Tag color="green">Paid</Tag> : <Tag color="orange">Unpaid</Tag>}
-            </Space>
-            <div className="space-y-2">
-              {(selectedOrder.items ?? []).map((item, index) => (
-                <div key={`${item.product_id ?? "na"}-${index}`} className="w-full flex justify-between gap-2 border-b border-gray-100 pb-2">
-                  <Text>{item.product_name} × {item.quantity}</Text>
-                  <Text>{formatUsd(item.subtotal_usd)} / {item.subtotal_sos.toLocaleString()} SSHL</Text>
-                </div>
-              ))}
-            </div>
-            <Divider />
-            <Text strong>Total: {formatUsd(selectedOrder.total_usd)} / {selectedOrder.total_sos.toLocaleString()} SSHL</Text>
-          </div>
-        ) : (
-          <Empty description="No order selected" />
-        )}
       </Modal>
 
       <Modal
