@@ -330,7 +330,7 @@ export default function POSPage() {
       <header className="h-14 bg-green-700 text-white px-3 sm:px-4 flex items-center justify-between">
         <Space>
           <AppstoreOutlined />
-          <Text strong className="!text-white">{shopName}</Text>
+          <Text strong className="text-white!">{shopName}</Text>
         </Space>
 
         <Space size="small">
@@ -402,7 +402,7 @@ export default function POSPage() {
                           {image ? (
                             <Image src={image} alt={`Image of ${product.name}`} preview={false} width="100%" height={84} className="rounded object-cover mb-2" />
                           ) : (
-                            <div className="h-[84px] rounded bg-green-50 flex items-center justify-center mb-2">🍽️</div>
+                            <div className="h-21 rounded bg-green-50 flex items-center justify-center mb-2">🍽️</div>
                           )}
                           <Text strong className="block truncate">{product.name}</Text>
                           {product.category_name ? <Text type="secondary" className="text-xs">{product.category_name}</Text> : null}
@@ -507,8 +507,7 @@ export default function POSPage() {
 
       <Drawer
         title={`Cart (${cartCount})`}
-        placement="bottom"
-        size="large"
+        size={560}
         open={cartDrawerOpen}
         onClose={() => setCartDrawerOpen(false)}
       >
@@ -575,7 +574,12 @@ export default function POSPage() {
           </Form.Item>
 
           <Form.Item name="discount" label="Discount (USD)">
-            <InputNumber min={0} max={cartTotalUsd} className="w-full" addonBefore="$" step={0.5} />
+            <Space.Compact block className="w-full">
+              <span className="inline-flex items-center rounded-l-md border border-r-0 border-gray-300 bg-gray-50 px-3 text-sm text-gray-600">
+                $
+              </span>
+              <InputNumber min={0} max={cartTotalUsd} className="w-full" step={0.5} />
+            </Space.Compact>
           </Form.Item>
 
           <Form.Item name="notes" label="Notes">

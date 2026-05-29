@@ -2,8 +2,16 @@
 
 import { useState, useEffect, useCallback } from "react";
 import {
-  Table, Button, Modal, Form, Input, Space, Typography,
-  Popconfirm, message, Card
+  App,
+  Table,
+  Button,
+  Modal,
+  Form,
+  Input,
+  Space,
+  Typography,
+  Popconfirm,
+  Card,
 } from "antd";
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined } from "@ant-design/icons";
 import type { Customer } from "@/lib/types";
@@ -11,6 +19,7 @@ import type { Customer } from "@/lib/types";
 const { Title } = Typography;
 
 export default function CustomersPage() {
+  const { message } = App.useApp();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -90,7 +99,7 @@ export default function CustomersPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-        <Title level={4} className="mb-0!">Customers</Title>
+        <Title level={4} className="mb-0">Customers</Title>
         <Space wrap>
           <Input
             prefix={<SearchOutlined />}

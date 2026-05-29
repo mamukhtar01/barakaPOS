@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Card, Form, Input, InputNumber, Button, Typography, message, Spin, Divider } from "antd";
+import { App, Card, Form, Input, InputNumber, Button, Typography, Spin, Divider } from "antd";
 import { SaveOutlined } from "@ant-design/icons";
 
 const { Title, Text } = Typography;
 
 export default function SettingsPage() {
+  const { message } = App.useApp();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);

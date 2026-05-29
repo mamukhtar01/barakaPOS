@@ -76,7 +76,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         placement="left"
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
-        size="default"
+        size={220}
         styles={{ body: { padding: 0 } }}
         className="md:hidden"
       >

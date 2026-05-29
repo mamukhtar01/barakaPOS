@@ -2,8 +2,18 @@
 
 import { useState, useEffect, useCallback } from "react";
 import {
-  Table, Button, Modal, Form, Input, ColorPicker, Space, Typography,
-  Popconfirm, message, Tag, Card
+  App,
+  Table,
+  Button,
+  Modal,
+  Form,
+  Input,
+  ColorPicker,
+  Space,
+  Typography,
+  Popconfirm,
+  Tag,
+  Card,
 } from "antd";
 import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import type { Category } from "@/lib/types";
@@ -11,6 +21,7 @@ import type { Category } from "@/lib/types";
 const { Title } = Typography;
 
 export default function CategoriesPage() {
+  const { message } = App.useApp();
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
