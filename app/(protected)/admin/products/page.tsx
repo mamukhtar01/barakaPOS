@@ -7,6 +7,7 @@ import {
 } from "antd";
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined } from "@ant-design/icons";
 import type { Product, Category } from "@/lib/types";
+import { invalidateCache } from "@/lib/client-cache";
 
 const { Title } = Typography;
 const MAX_IMAGE_BYTES = 350 * 1024;
@@ -170,6 +171,7 @@ export default function ProductsPage() {
   const handleDelete = async (id: number) => {
     await fetch(`/api/products/${id}`, { method: "DELETE" });
     message.success("Product deleted");
+    invalidateCache("products"); // force POS to re-fetch on next load
     fetchData();
   };
 
@@ -197,6 +199,7 @@ export default function ProductsPage() {
     if (res.ok) {
       message.success(editing ? "Product updated" : "Product created");
       setModalOpen(false);
+      invalidateCache("products"); // force POS to re-fetch on next load
       fetchData();
     } else {
       const data = await res.json();

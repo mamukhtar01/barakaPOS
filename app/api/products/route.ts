@@ -31,7 +31,9 @@ export async function GET(request: NextRequest) {
   sql += " ORDER BY p.name ASC";
 
   const { rows } = await db.execute({ sql, args });
-  return Response.json({ products: rows });
+  return Response.json({ products: rows }, {
+    headers: { "Cache-Control": "private, max-age=60, stale-while-revalidate=300" },
+  });
 }
 
 export async function POST(request: NextRequest) {
