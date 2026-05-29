@@ -458,11 +458,14 @@ export default function POSPage() {
     const detail = orderDetailsById[order.id];
     const isExpanded = expandedOrderId === order.id;
     const isSavingItems = savingOrderItemsId === order.id;
+    const rowClassName = order.payment_status === "paid"
+      ? "border border-emerald-200 bg-emerald-50/40"
+      : "border border-amber-200 bg-amber-50/45";
 
     return (
       <div
         key={order.id}
-        className="border border-gray-200 rounded-md px-3 py-2"
+        className={`rounded-md px-3 py-2 transition-colors ${rowClassName}`}
       >
         <div
           className="cursor-pointer flex items-start justify-between gap-3"
