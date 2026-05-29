@@ -1,9 +1,8 @@
-import { db, initDb } from "@/lib/db";
+import { db } from "@/lib/db";
 import { getSession, hashPin } from "@/lib/auth";
 import { NextRequest } from "next/server";
 
 export async function GET() {
-  await initDb();
   const session = await getSession();
   if (!session || session.role !== "admin") return Response.json({ error: "Forbidden" }, { status: 403 });
   const { rows } = await db.execute(
@@ -13,7 +12,6 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  await initDb();
   const session = await getSession();
   if (!session || session.role !== "admin") return Response.json({ error: "Forbidden" }, { status: 403 });
   const { username, pin, role } = await request.json();

@@ -1,8 +1,7 @@
 import { getSession } from "@/lib/auth";
-import { db, initDb } from "@/lib/db";
+import { db } from "@/lib/db";
 
 export async function GET() {
-  await initDb();
   const session = await getSession();
   if (!session) {
     return Response.json({ error: "Not authenticated" }, { status: 401 });

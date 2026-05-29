@@ -1,9 +1,8 @@
-import { db, initDb } from "@/lib/db";
+import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { NextRequest } from "next/server";
 
 export async function GET() {
-  await initDb();
   const session = await getSession();
   if (!session) return Response.json({ error: "Unauthorized" }, { status: 401 });
   const { rows } = await db.execute("SELECT * FROM categories ORDER BY name ASC");
@@ -11,7 +10,6 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  await initDb();
   const session = await getSession();
   if (!session || session.role !== "admin") return Response.json({ error: "Forbidden" }, { status: 403 });
   const { name, color } = await request.json();

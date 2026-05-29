@@ -1,9 +1,8 @@
-import { db, initDb } from "@/lib/db";
+import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { NextRequest } from "next/server";
 
 export async function GET(request: NextRequest) {
-  await initDb();
   const session = await getSession();
   if (!session) return Response.json({ error: "Unauthorized" }, { status: 401 });
   const search = new URL(request.url).searchParams.get("search");
@@ -19,7 +18,6 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  await initDb();
   const session = await getSession();
   if (!session) return Response.json({ error: "Unauthorized" }, { status: 401 });
   const { name, phone } = await request.json();

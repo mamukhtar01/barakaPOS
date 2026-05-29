@@ -1,9 +1,8 @@
-import { db, initDb } from "@/lib/db";
+import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { NextRequest } from "next/server";
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  await initDb();
   const session = await getSession();
   if (!session) return Response.json({ error: "Unauthorized" }, { status: 401 });
   const { id } = await params;
@@ -24,7 +23,6 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 }
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  await initDb();
   const session = await getSession();
   if (!session) return Response.json({ error: "Unauthorized" }, { status: 401 });
 

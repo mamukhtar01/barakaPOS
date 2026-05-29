@@ -1,9 +1,8 @@
-import { db, initDb } from "@/lib/db";
+import { db } from "@/lib/db";
 import { hashPin, createSession, setSessionCookie } from "@/lib/auth";
 import { NextRequest } from "next/server";
 
 export async function POST(request: NextRequest) {
-  await initDb();
   const { username, pin } = await request.json();
   if (!username || !pin) {
     return Response.json({ error: "Username and PIN required" }, { status: 400 });
