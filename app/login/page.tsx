@@ -132,10 +132,7 @@ export default function LoginPage() {
               </Button>
             </Form.Item>
           </Form>
-
-          <Text type="secondary" className="text-xs">
-            Default: admin / 1234
-          </Text>
+         
         </Space>
       </Card>
     </div>
