@@ -461,6 +461,7 @@ export default function POSPage() {
     const customer = order.customer_id ? customerById.get(order.customer_id) : undefined;
     const customerName = order.customer_name ?? customer?.name ?? "Walk-in";
     const customerPhone = customer?.phone?.trim() ? customer.phone : "";
+    const cashierName = order.cashier_name?.trim() || "-";
     const detail = orderDetailsById[order.id];
     const isExpanded = expandedOrderId === order.id;
     const isSavingItems = savingOrderItemsId === order.id;
@@ -491,7 +492,7 @@ export default function POSPage() {
               </div>
               <Text type="secondary" className="block text-xs">
                 <ClockCircleOutlined className="mr-1" />
-                {new Date(order.created_at).toLocaleString()}
+                {new Date(order.created_at).toLocaleString()} • by: {cashierName}
               </Text>
             </div>
             <div className="shrink-0 text-right">
