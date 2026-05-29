@@ -2,8 +2,19 @@
 
 import { useState, useEffect, useCallback } from "react";
 import {
-  Table, Button, Modal, Form, Input, Select, Switch,
-  Space, Typography, Popconfirm, message, Tag, Card
+  App,
+  Table,
+  Button,
+  Modal,
+  Form,
+  Input,
+  Select,
+  Switch,
+  Space,
+  Typography,
+  Popconfirm,
+  Tag,
+  Card,
 } from "antd";
 import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 
@@ -18,6 +29,7 @@ interface User {
 }
 
 export default function UsersPage() {
+  const { message } = App.useApp();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -108,7 +120,7 @@ export default function UsersPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <Title level={4} className="!mb-0">Users</Title>
+        <Title level={4} className="mb-0!">Users</Title>
         <Button type="primary" icon={<PlusOutlined />} onClick={openAdd}>Add User</Button>
       </div>
 
