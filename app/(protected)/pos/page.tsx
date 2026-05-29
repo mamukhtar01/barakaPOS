@@ -974,6 +974,11 @@ function Receipt({ sale, shopName }: { sale: Sale; shopName: string }) {
   return (
     <div id="receipt" className="font-mono text-sm">
       <div className="text-center mb-2">
+        <img
+          src="/logo.png"
+          alt={`${shopName} logo`}
+          className="mx-auto mb-2 h-12 w-auto object-contain"
+        />
         <Text strong className="block text-base">{shopName}</Text>
         <Text type="secondary" className="text-xs">Order #{sale.id}</Text>
         <br />
