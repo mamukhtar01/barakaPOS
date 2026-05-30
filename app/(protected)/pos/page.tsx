@@ -15,6 +15,7 @@ import {
   Input,
   InputNumber,
   Modal,
+  Popconfirm,
   Row,
   Segmented,
   Select,
@@ -27,6 +28,7 @@ import {
 import {
   AppstoreOutlined,
   CheckCircleOutlined,
+  CloseCircleOutlined,
   ClockCircleOutlined,
   DeleteOutlined,
   DownOutlined,
@@ -43,7 +45,15 @@ import {
 } from "@ant-design/icons";
 import { useAuth } from "@/components/ClientProvider";
 import { useRouter } from "next/navigation";
-import type { CartItem, Category, Currency, Customer, Product, Sale, SalePaymentStatus } from "@/lib/types";
+import type {
+  CartItem,
+  Category,
+  Currency,
+  Customer,
+  Product,
+  Sale,
+  SalePaymentStatus,
+} from "@/lib/types";
 
 const { Text } = Typography;
 
@@ -76,9 +86,15 @@ export default function POSPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [recentOrders, setRecentOrders] = useState<Sale[]>([]);
   const [expandedOrderId, setExpandedOrderId] = useState<number | null>(null);
-  const [loadingOrderDetailsId, setLoadingOrderDetailsId] = useState<number | null>(null);
-  const [savingOrderItemsId, setSavingOrderItemsId] = useState<number | null>(null);
-  const [orderDetailsById, setOrderDetailsById] = useState<Record<number, Sale>>({});
+  const [loadingOrderDetailsId, setLoadingOrderDetailsId] = useState<
+    number | null
+  >(null);
+  const [savingOrderItemsId, setSavingOrderItemsId] = useState<number | null>(
+    null,
+  );
+  const [orderDetailsById, setOrderDetailsById] = useState<
+    Record<number, Sale>
+  >({});
   const [editingOrderId, setEditingOrderId] = useState<number | null>(null);
 
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -96,7 +112,9 @@ export default function POSPage() {
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
   const [ordersDrawerOpen, setOrdersDrawerOpen] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
-  const [checkoutTabKey, setCheckoutTabKey] = useState<"checkout" | "details">("checkout");
+  const [checkoutTabKey, setCheckoutTabKey] = useState<"checkout" | "details">(
+    "checkout",
+  );
   const [receiptOpen, setReceiptOpen] = useState(false);
   const [customerQuickOpen, setCustomerQuickOpen] = useState(false);
 
@@ -143,7 +161,8 @@ export default function POSPage() {
     const res = await fetch("/api/settings");
     if (!res.ok) return;
     const data = await res.json();
-    if (data.settings?.exchange_rate) setExchangeRate(Number(data.settings.exchange_rate));
+    if (data.settings?.exchange_rate)
+      setExchangeRate(Number(data.settings.exchange_rate));
     if (data.settings?.shop_name) setShopName(data.settings.shop_name);
   }, []);
 
@@ -157,32 +176,38 @@ export default function POSPage() {
     setLoadingOrders(false);
   }, []);
 
-  const fetchOrderDetails = useCallback(async (id: number): Promise<Sale | null> => {
-    setLoadingOrderDetailsId(id);
-    const res = await fetch(`/api/sales/${id}`);
-    if (!res.ok) {
-      message.error("Failed to load order details");
+  const fetchOrderDetails = useCallback(
+    async (id: number): Promise<Sale | null> => {
+      setLoadingOrderDetailsId(id);
+      const res = await fetch(`/api/sales/${id}`);
+      if (!res.ok) {
+        message.error("Failed to load order details");
+        setLoadingOrderDetailsId(null);
+        return null;
+      }
+      const data = await res.json();
+      const normalizedSale = normalizeSale(data.sale);
+      setOrderDetailsById((prev) => ({ ...prev, [id]: normalizedSale }));
       setLoadingOrderDetailsId(null);
-      return null;
-    }
-    const data = await res.json();
-    const normalizedSale = normalizeSale(data.sale);
-    setOrderDetailsById((prev) => ({ ...prev, [id]: normalizedSale }));
-    setLoadingOrderDetailsId(null);
-    return normalizedSale;
-  }, [message]);
+      return normalizedSale;
+    },
+    [message],
+  );
 
-  const toggleOrderDetails = useCallback(async (id: number) => {
-    if (expandedOrderId === id) {
-      setExpandedOrderId(null);
-      return;
-    }
+  const toggleOrderDetails = useCallback(
+    async (id: number) => {
+      if (expandedOrderId === id) {
+        setExpandedOrderId(null);
+        return;
+      }
 
-    setExpandedOrderId(id);
-    if (!orderDetailsById[id]) {
-      await fetchOrderDetails(id);
-    }
-  }, [expandedOrderId, orderDetailsById, fetchOrderDetails]);
+      setExpandedOrderId(id);
+      if (!orderDetailsById[id]) {
+        await fetchOrderDetails(id);
+      }
+    },
+    [expandedOrderId, orderDetailsById, fetchOrderDetails],
+  );
 
   const closeOrderDetails = useCallback(() => {
     setExpandedOrderId(null);
@@ -190,9 +215,21 @@ export default function POSPage() {
 
   useEffect(() => {
     void (async () => {
-      await Promise.all([fetchCategories(), fetchCustomers(), fetchSettings(), fetchRecentOrders(), fetchOrderEditProducts()]);
+      await Promise.all([
+        fetchCategories(),
+        fetchCustomers(),
+        fetchSettings(),
+        fetchRecentOrders(),
+        fetchOrderEditProducts(),
+      ]);
     })();
-  }, [fetchCategories, fetchCustomers, fetchSettings, fetchRecentOrders, fetchOrderEditProducts]);
+  }, [
+    fetchCategories,
+    fetchCustomers,
+    fetchSettings,
+    fetchRecentOrders,
+    fetchOrderEditProducts,
+  ]);
 
   useEffect(() => {
     void (async () => {
@@ -205,7 +242,9 @@ export default function POSPage() {
       const existing = prev.find((item) => item.product_id === product.id);
       if (existing) {
         return prev.map((item) =>
-          item.product_id === product.id ? { ...item, quantity: item.quantity + 1 } : item
+          item.product_id === product.id
+            ? { ...item, quantity: item.quantity + 1 }
+            : item,
         );
       }
 
@@ -225,27 +264,38 @@ export default function POSPage() {
   const updateQty = (id: number, delta: number) => {
     setCart((prev) =>
       prev
-        .map((item) => (item.product_id === id ? { ...item, quantity: item.quantity + delta } : item))
-        .filter((item) => item.quantity > 0)
+        .map((item) =>
+          item.product_id === id
+            ? { ...item, quantity: item.quantity + delta }
+            : item,
+        )
+        .filter((item) => item.quantity > 0),
     );
   };
 
-  const removeItem = (id: number) => setCart((prev) => prev.filter((item) => item.product_id !== id));
+  const removeItem = (id: number) =>
+    setCart((prev) => prev.filter((item) => item.product_id !== id));
   const clearCart = () => setCart([]);
 
-  const cartCount = useMemo(() => cart.reduce((sum, item) => sum + item.quantity, 0), [cart]);
+  const cartCount = useMemo(
+    () => cart.reduce((sum, item) => sum + item.quantity, 0),
+    [cart],
+  );
   const cartTotalUsd = useMemo(
-    () => cart.reduce((sum, item) => sum + item.unit_price_usd * item.quantity, 0),
-    [cart]
+    () =>
+      cart.reduce((sum, item) => sum + item.unit_price_usd * item.quantity, 0),
+    [cart],
   );
   const customerById = useMemo(
     () => new Map(customers.map((customer) => [customer.id, customer])),
-    [customers]
+    [customers],
   );
 
   const formatUsd = (usd: number) => `$${usd.toFixed(2)}`;
-  const formatSshl = (usd: number, rate = exchangeRate) => `${(usd * rate).toLocaleString()} SSHL`;
-  const displayPrice = (usd: number) => (selectedCurrency === "USD" ? formatUsd(usd) : formatSshl(usd));
+  const formatSshl = (usd: number, rate = exchangeRate) =>
+    `${(usd * rate).toLocaleString()} SSHL`;
+  const displayPrice = (usd: number) =>
+    selectedCurrency === "USD" ? formatUsd(usd) : formatSshl(usd);
 
   const handleCheckout = () => {
     if (cart.length === 0) {
@@ -316,7 +366,9 @@ export default function POSPage() {
       setCart([]);
       setReceiptOpen(true);
       await fetchRecentOrders();
-      message.success(orderAction === "paid" ? "Order completed" : "Order parked as unpaid");
+      message.success(
+        orderAction === "paid" ? "Order completed" : "Order parked as unpaid",
+      );
     } catch {
       message.error("Network error while placing order");
     } finally {
@@ -324,7 +376,10 @@ export default function POSPage() {
     }
   };
 
-  const onQuickCreateCustomer = async (values: { name: string; phone?: string }) => {
+  const onQuickCreateCustomer = async (values: {
+    name: string;
+    phone?: string;
+  }) => {
     const phone = values.phone?.trim() ? values.phone.trim() : null;
     const res = await fetch("/api/customers", {
       method: "POST",
@@ -363,74 +418,106 @@ export default function POSPage() {
     await fetchOrderDetails(id);
   };
 
-  const startEditingOrder = useCallback(async (id: number) => {
-    const detail = orderDetailsById[id] ?? await fetchOrderDetails(id);
-    if (!detail) return;
-
-    if (detail.payment_status !== "unpaid") {
-      message.warning("Only unpaid orders can be updated");
-      return;
-    }
-
-    const productById = new Map(
-      [...orderEditProducts, ...products].map((product) => [product.id, product])
-    );
-
-    const nextCart: CartItem[] = (detail.items ?? []).map((item, index) => {
-      const fallbackId = -(index + 1);
-      const safeProductId = item.product_id ?? fallbackId;
-      const sourceProduct = item.product_id ? productById.get(item.product_id) : undefined;
-
-      return {
-        product_id: safeProductId,
-        product_name: item.product_name,
-        unit_price_usd: Number(item.unit_price_usd),
-        quantity: Number(item.quantity),
-        image_url: sourceProduct ? (getProductImage(sourceProduct) ?? null) : null,
-      };
-    });
-
-    setCart(nextCart);
-    setEditingOrderId(id);
-    setOrdersDrawerOpen(false);
-    message.success(`Order #${id} loaded into cart`);
-  }, [orderDetailsById, fetchOrderDetails, message, orderEditProducts, products]);
-
-  const updateUnpaidOrderItems = useCallback(async (id: number, nextItems: Sale["items"]) => {
-    if (!nextItems || nextItems.length === 0) {
-      message.warning("Order must contain at least one item");
-      return;
-    }
-
-    setSavingOrderItemsId(id);
-    const res = await fetch(`/api/sales/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        items: nextItems.map((item) => ({
-          product_id: item.product_id,
-          product_name: item.product_name,
-          quantity: item.quantity,
-          unit_price_usd: item.unit_price_usd,
-        })),
-      }),
-    });
-
+  const cancelOrder = async (id: number) => {
+    const res = await fetch(`/api/sales/${id}`, { method: "DELETE" });
     const data = await res.json();
     if (!res.ok) {
-      message.error(data.error ?? "Failed to update order items");
-      setSavingOrderItemsId(null);
+      message.error(data.error ?? "Failed to cancel order");
       return;
     }
+    message.success("Order cancelled");
+    setRecentOrders((prev) => prev.filter((o) => o.id !== id));
+    setOrderDetailsById((prev) => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+    setExpandedOrderId(null);
+  };
 
-    const updatedSale = normalizeSale(data.sale as Sale);
-    setOrderDetailsById((prev) => ({ ...prev, [id]: updatedSale }));
-    setRecentOrders((prev) =>
-      prev.map((order) => (order.id === id ? normalizeSale({ ...order, ...updatedSale }) : order))
-    );
-    setSavingOrderItemsId(null);
-    message.success("Order updated");
-  }, [message]);
+  const startEditingOrder = useCallback(
+    async (id: number) => {
+      const detail = orderDetailsById[id] ?? (await fetchOrderDetails(id));
+      if (!detail) return;
+
+      if (detail.payment_status !== "unpaid") {
+        message.warning("Only unpaid orders can be updated");
+        return;
+      }
+
+      const productById = new Map(
+        [...orderEditProducts, ...products].map((product) => [
+          product.id,
+          product,
+        ]),
+      );
+
+      const nextCart: CartItem[] = (detail.items ?? []).map((item, index) => {
+        const fallbackId = -(index + 1);
+        const safeProductId = item.product_id ?? fallbackId;
+        const sourceProduct = item.product_id
+          ? productById.get(item.product_id)
+          : undefined;
+
+        return {
+          product_id: safeProductId,
+          product_name: item.product_name,
+          unit_price_usd: Number(item.unit_price_usd),
+          quantity: Number(item.quantity),
+          image_url: sourceProduct
+            ? (getProductImage(sourceProduct) ?? null)
+            : null,
+        };
+      });
+
+      setCart(nextCart);
+      setEditingOrderId(id);
+      setOrdersDrawerOpen(false);
+      message.success(`Order #${id} loaded into cart`);
+    },
+    [orderDetailsById, fetchOrderDetails, message, orderEditProducts, products],
+  );
+
+  const updateUnpaidOrderItems = useCallback(
+    async (id: number, nextItems: Sale["items"]) => {
+      if (!nextItems || nextItems.length === 0) {
+        message.warning("Order must contain at least one item");
+        return;
+      }
+
+      setSavingOrderItemsId(id);
+      const res = await fetch(`/api/sales/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          items: nextItems.map((item) => ({
+            product_id: item.product_id,
+            product_name: item.product_name,
+            quantity: item.quantity,
+            unit_price_usd: item.unit_price_usd,
+          })),
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        message.error(data.error ?? "Failed to update order items");
+        setSavingOrderItemsId(null);
+        return;
+      }
+
+      const updatedSale = normalizeSale(data.sale as Sale);
+      setOrderDetailsById((prev) => ({ ...prev, [id]: updatedSale }));
+      setRecentOrders((prev) =>
+        prev.map((order) =>
+          order.id === id ? normalizeSale({ ...order, ...updatedSale }) : order,
+        ),
+      );
+      setSavingOrderItemsId(null);
+      message.success("Order updated");
+    },
+    [message],
+  );
 
   const saveEditingOrderFromCart = useCallback(async () => {
     if (!editingOrderId) return;
@@ -439,7 +526,9 @@ export default function POSPage() {
       return;
     }
 
-    const detail = orderDetailsById[editingOrderId] ?? await fetchOrderDetails(editingOrderId);
+    const detail =
+      orderDetailsById[editingOrderId] ??
+      (await fetchOrderDetails(editingOrderId));
     if (!detail) return;
 
     const nextItems = cart.map((item) => ({
@@ -458,10 +547,20 @@ export default function POSPage() {
     setEditingOrderId(null);
     setCart([]);
     await fetchRecentOrders();
-  }, [editingOrderId, cart, message, orderDetailsById, fetchOrderDetails, updateUnpaidOrderItems, fetchRecentOrders]);
+  }, [
+    editingOrderId,
+    cart,
+    message,
+    orderDetailsById,
+    fetchOrderDetails,
+    updateUnpaidOrderItems,
+    fetchRecentOrders,
+  ]);
 
   const renderOrderItem = (order: Sale, inMobileDrawer = false) => {
-    const customer = order.customer_id ? customerById.get(order.customer_id) : undefined;
+    const customer = order.customer_id
+      ? customerById.get(order.customer_id)
+      : undefined;
     const customerName = order.customer_name ?? customer?.name ?? "Walk-in";
     const customerPhone = customer?.phone?.trim() ? customer.phone : "";
     const cashierName = order.cashier_name?.trim() || "-";
@@ -490,17 +589,32 @@ export default function POSPage() {
                 <Text strong className="text-base leading-tight truncate">
                   {`Order #${order.id} ${customerName}${customerPhone ? ` • ${customerPhone}` : ""}`}
                 </Text>
-                <Tag color={isPaid ? "green" : "orange"}>{isPaid ? "Paid" : "Unpaid"}</Tag>
-                <Text type="secondary" className="text-xs">{isExpanded ? <UpOutlined /> : <DownOutlined />}</Text>
+                <Tag color={isPaid ? "green" : "orange"}>
+                  {isPaid ? "Paid" : "Unpaid"}
+                </Tag>
+                <Text type="secondary" className="text-xs">
+                  {isExpanded ? <UpOutlined /> : <DownOutlined />}
+                </Text>
               </div>
               <Text type="secondary" className="block text-xs">
                 <ClockCircleOutlined className="mr-1" />
-                {new Date(order.created_at).toLocaleString()} • by: {cashierName}
+                {new Date(order.created_at).toLocaleString([], {
+                  year: "2-digit",
+                  month: "numeric",
+                  day: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}{" "}
+                • by: {cashierName}
               </Text>
             </div>
             <div className="shrink-0 text-right">
-              <Text strong className="block text-sm">{formatUsd(order.total_usd)}</Text>
-              <Text type="secondary" className="block text-xs">{order.total_sos.toLocaleString()} SSHL</Text>
+              <Text strong className="block text-sm">
+                {formatUsd(order.total_usd)}
+              </Text>
+              <Text type="secondary" className="block text-xs">
+                {order.total_sos.toLocaleString()} SSHL
+              </Text>
             </div>
           </div>
         </button>
@@ -508,7 +622,9 @@ export default function POSPage() {
         {isExpanded ? (
           <div className="mt-3 border-t border-black/10 pt-3">
             {loadingOrderDetailsId === order.id ? (
-              <div className="py-2"><Spin size="small" /></div>
+              <div className="py-2">
+                <Spin size="small" />
+              </div>
             ) : detail ? (
               <>
                 <div className="mb-2 flex flex-wrap items-center justify-end gap-2">
@@ -521,7 +637,7 @@ export default function POSPage() {
                         void startEditingOrder(order.id);
                       }}
                     >
-                      Update order
+                      Update
                     </Button>
                   ) : null}
                   {detail.payment_status === "unpaid" ? (
@@ -537,6 +653,24 @@ export default function POSPage() {
                       Mark as paid
                     </Button>
                   ) : null}
+                  {detail.payment_status === "unpaid" ? (
+                    <Popconfirm
+                      title="Cancel this order?"
+                      description="This will permanently delete the order."
+                      onConfirm={() => void cancelOrder(order.id)}
+                    >
+                      <Button
+                        size="small"
+                        danger
+                        icon={<CloseCircleOutlined />}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                    </Popconfirm>
+                  ) : null}
                   <Button
                     size="small"
                     icon={<PrinterOutlined />}
@@ -547,7 +681,7 @@ export default function POSPage() {
                       setReceiptOpen(true);
                     }}
                   >
-                    Print slip
+                    Print
                   </Button>
                 </div>
 
@@ -560,22 +694,34 @@ export default function POSPage() {
                 ) : null}
 
                 {(detail.items ?? []).length === 0 ? (
-                  <Empty description="No items in this order" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+                  <Empty
+                    description="No items in this order"
+                    image={Empty.PRESENTED_IMAGE_SIMPLE}
+                  />
                 ) : (
                   <div className="space-y-2">
                     {(detail.items ?? []).map((item, index) => (
-                      <div key={`${item.product_id ?? "na"}-${index}`} className="w-full flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-black/5 pb-2 text-sm">
-                        <Text>{item.product_name} × {item.quantity}</Text>
+                      <div
+                        key={`${item.product_id ?? "na"}-${index}`}
+                        className="w-full flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-black/5 pb-2 text-sm"
+                      >
+                        <Text>
+                          {item.product_name} × {item.quantity}
+                        </Text>
                         <Text type="secondary">•</Text>
                         <Text strong>{formatUsd(item.subtotal_usd)}</Text>
-                        <Text type="secondary">/ {item.subtotal_sos.toLocaleString()} SSHL</Text>
+                        <Text type="secondary">
+                          / {item.subtotal_sos.toLocaleString()} SSHL
+                        </Text>
                       </div>
                     ))}
                   </div>
                 )}
               </>
             ) : (
-              <Text type="secondary" className="text-xs">No order details available</Text>
+              <Text type="secondary" className="text-xs">
+                No order details available
+              </Text>
             )}
           </div>
         ) : null}
@@ -590,7 +736,9 @@ export default function POSPage() {
       <header className="sticky top-0 z-30 h-14 bg-green-700 text-white px-3 sm:px-4 flex items-center justify-between">
         <Space>
           <AppstoreOutlined />
-          <Text strong className="text-white!">{shopName}</Text>
+          <Text strong className="text-white!">
+            {shopName}
+          </Text>
         </Space>
 
         <Space size="small">
@@ -607,7 +755,12 @@ export default function POSPage() {
           />
 
           {user?.role === "admin" ? (
-            <Button size="small" icon={<SettingOutlined />} ghost onClick={() => router.push("/admin")} />
+            <Button
+              size="small"
+              icon={<SettingOutlined />}
+              ghost
+              onClick={() => router.push("/admin")}
+            />
           ) : null}
 
           <Button size="small" icon={<LogoutOutlined />} ghost onClick={logout}>
@@ -618,7 +771,11 @@ export default function POSPage() {
 
       <main className="flex-1 scroll-smooth p-3 sm:p-4 md:pb-96 lg:pb-4 lg:h-[calc(100vh-3.5rem)] lg:overflow-hidden">
         <Row gutter={[12, 12]} className="lg:h-full">
-          <Col xs={24} lg={16} className="flex flex-col gap-3 lg:h-full lg:overflow-hidden">
+          <Col
+            xs={24}
+            lg={16}
+            className="flex flex-col gap-3 lg:h-full lg:overflow-hidden"
+          >
             <Card size="small">
               <div className="flex gap-2 flex-wrap">
                 <Input
@@ -636,14 +793,22 @@ export default function POSPage() {
                   placeholder="Filter category"
                   value={selectedCategory ?? undefined}
                   onChange={(value) => setSelectedCategory(value ?? null)}
-                  options={categories.map((cat) => ({ value: cat.id, label: cat.name }))}
+                  options={categories.map((cat) => ({
+                    value: cat.id,
+                    label: cat.name,
+                  }))}
                 />
               </div>
             </Card>
 
-            <Card size="small" className="lg:flex-1 overflow-y-auto scroll-smooth">
+            <Card
+              size="small"
+              className="lg:flex-1 overflow-y-auto scroll-smooth"
+            >
               {loadingProducts ? (
-                <div className="py-20 text-center"><Spin /></div>
+                <div className="py-20 text-center">
+                  <Spin />
+                </div>
               ) : products.length === 0 ? (
                 <Empty description="No products found" />
               ) : (
@@ -660,13 +825,30 @@ export default function POSPage() {
                           onClick={() => addToCart(product)}
                         >
                           {image ? (
-                            <Image src={image} alt={`Image of ${product.name}`} preview={false} width="100%" height={84} className="rounded object-cover mb-2" />
+                            <Image
+                              src={image}
+                              alt={`Image of ${product.name}`}
+                              preview={false}
+                              width="100%"
+                              height={84}
+                              className="rounded object-cover mb-2"
+                            />
                           ) : (
-                            <div className="h-21 rounded bg-green-50 flex items-center justify-center mb-2">🍽️</div>
+                            <div className="h-21 rounded bg-green-50 flex items-center justify-center mb-2">
+                              🍽️
+                            </div>
                           )}
-                          <Text strong className="block truncate">{product.name}</Text>
-                          {product.category_name ? <Text type="secondary" className="text-xs">{product.category_name}</Text> : null}
-                          <Text className="text-green-700 block mt-1">{displayPrice(Number(product.sale_price_usd))}</Text>
+                          <Text strong className="block truncate">
+                            {product.name}
+                          </Text>
+                          {product.category_name ? (
+                            <Text type="secondary" className="text-xs">
+                              {product.category_name}
+                            </Text>
+                          ) : null}
+                          <Text className="text-green-700 block mt-1">
+                            {displayPrice(Number(product.sale_price_usd))}
+                          </Text>
                         </Card>
                       </Col>
                     );
@@ -678,55 +860,72 @@ export default function POSPage() {
 
           <Col xs={24} lg={8}>
             <div className="hidden lg:flex flex-col gap-3 h-full min-h-0">
-            <Card
-              title={`Cart (${cartCount})`}
-              size="small"
-              className="shrink-0"
-              styles={{ body: { paddingTop: 12, maxHeight: "52vh", display: "flex", flexDirection: "column", minHeight: 0 } }}
-            >
-              <CartPanel
-                cart={cart}
-                cartCount={cartCount}
-                cartTotalUsd={cartTotalUsd}
-                editingOrderId={editingOrderId}
-                displayPrice={displayPrice}
-                formatUsd={formatUsd}
-                formatSshl={formatSshl}
-                updateQty={updateQty}
-                removeItem={removeItem}
-                clearCart={clearCart}
-                checkoutLoading={savingOrderItemsId === editingOrderId && editingOrderId !== null}
-                onCancelEditOrder={() => {
-                  setEditingOrderId(null);
-                  setCart([]);
+              <Card
+                title={`Cart (${cartCount})`}
+                size="small"
+                className="shrink-0"
+                styles={{
+                  body: {
+                    paddingTop: 12,
+                    maxHeight: "52vh",
+                    display: "flex",
+                    flexDirection: "column",
+                    minHeight: 0,
+                  },
                 }}
-                onCheckout={() => {
-                  if (editingOrderId) {
-                    void saveEditingOrderFromCart();
-                    return;
+              >
+                <CartPanel
+                  cart={cart}
+                  cartCount={cartCount}
+                  cartTotalUsd={cartTotalUsd}
+                  editingOrderId={editingOrderId}
+                  displayPrice={displayPrice}
+                  formatUsd={formatUsd}
+                  formatSshl={formatSshl}
+                  updateQty={updateQty}
+                  removeItem={removeItem}
+                  clearCart={clearCart}
+                  checkoutLoading={
+                    savingOrderItemsId === editingOrderId &&
+                    editingOrderId !== null
                   }
-                  handleCheckout();
-                }}
-              />
-            </Card>
+                  onCancelEditOrder={() => {
+                    setEditingOrderId(null);
+                    setCart([]);
+                  }}
+                  onCheckout={() => {
+                    if (editingOrderId) {
+                      void saveEditingOrderFromCart();
+                      return;
+                    }
+                    handleCheckout();
+                  }}
+                />
+              </Card>
 
-            <Card
-              title="Recent orders"
-              size="small"
-              className="flex-1 overflow-hidden flex flex-col"
-              styles={{ body: { flex: 1, overflowY: "auto", minHeight: 0 } }}
-              extra={<Button size="small" onClick={() => void fetchRecentOrders()}>Refresh</Button>}
-            >
-              {loadingOrders ? (
-                <div className="text-center py-10"><Spin /></div>
-              ) : recentOrders.length === 0 ? (
-                <Empty description="No recent orders" />
-              ) : (
-                <div className="h-full overflow-y-auto pr-1 space-y-2">
-                  {recentOrders.map((order) => renderOrderItem(order))}
-                </div>
-              )}
-            </Card>
+              <Card
+                title="Recent orders"
+                size="small"
+                className="flex-1 overflow-hidden flex flex-col"
+                styles={{ body: { flex: 1, overflowY: "auto", minHeight: 0 } }}
+                extra={
+                  <Button size="small" onClick={() => void fetchRecentOrders()}>
+                    Refresh
+                  </Button>
+                }
+              >
+                {loadingOrders ? (
+                  <div className="text-center py-10">
+                    <Spin />
+                  </div>
+                ) : recentOrders.length === 0 ? (
+                  <Empty description="No recent orders" />
+                ) : (
+                  <div className="h-full overflow-y-auto pr-1 space-y-2">
+                    {recentOrders.map((order) => renderOrderItem(order))}
+                  </div>
+                )}
+              </Card>
             </div>
           </Col>
         </Row>
@@ -737,7 +936,15 @@ export default function POSPage() {
           title={`Cart (${cartCount})`}
           size="small"
           className="shadow-lg"
-          styles={{ body: { paddingTop: 12, maxHeight: "46vh", minHeight: 300, display: "flex", flexDirection: "column" } }}
+          styles={{
+            body: {
+              paddingTop: 12,
+              maxHeight: "46vh",
+              minHeight: 300,
+              display: "flex",
+              flexDirection: "column",
+            },
+          }}
         >
           <CartPanel
             cart={cart}
@@ -750,7 +957,9 @@ export default function POSPage() {
             updateQty={updateQty}
             removeItem={removeItem}
             clearCart={clearCart}
-            checkoutLoading={savingOrderItemsId === editingOrderId && editingOrderId !== null}
+            checkoutLoading={
+              savingOrderItemsId === editingOrderId && editingOrderId !== null
+            }
             onCancelEditOrder={() => {
               setEditingOrderId(null);
               setCart([]);
@@ -768,7 +977,13 @@ export default function POSPage() {
 
       <div className="md:hidden fixed right-4 bottom-4 z-20">
         <Badge count={cartCount}>
-          <Button type="primary" shape="circle" size="large" icon={<ShoppingCartOutlined />} onClick={() => setCartDrawerOpen(true)} />
+          <Button
+            type="primary"
+            shape="circle"
+            size="large"
+            icon={<ShoppingCartOutlined />}
+            onClick={() => setCartDrawerOpen(true)}
+          />
         </Badge>
       </div>
 
@@ -781,10 +996,14 @@ export default function POSPage() {
           setOrdersDrawerOpen(false);
           closeOrderDetails();
         }}
-        styles={{ body: { display: "flex", flexDirection: "column", minHeight: 0 } }}
+        styles={{
+          body: { display: "flex", flexDirection: "column", minHeight: 0 },
+        }}
       >
         {loadingOrders ? (
-          <div className="text-center py-10"><Spin /></div>
+          <div className="text-center py-10">
+            <Spin />
+          </div>
         ) : recentOrders.length === 0 ? (
           <Empty description="No recent orders" />
         ) : (
@@ -799,7 +1018,9 @@ export default function POSPage() {
         size={560}
         open={cartDrawerOpen}
         onClose={() => setCartDrawerOpen(false)}
-        styles={{ body: { display: "flex", flexDirection: "column", minHeight: 0 } }}
+        styles={{
+          body: { display: "flex", flexDirection: "column", minHeight: 0 },
+        }}
       >
         <CartPanel
           cart={cart}
@@ -812,7 +1033,9 @@ export default function POSPage() {
           updateQty={updateQty}
           removeItem={removeItem}
           clearCart={clearCart}
-          checkoutLoading={savingOrderItemsId === editingOrderId && editingOrderId !== null}
+          checkoutLoading={
+            savingOrderItemsId === editingOrderId && editingOrderId !== null
+          }
           onCancelEditOrder={() => {
             setEditingOrderId(null);
             setCart([]);
@@ -849,8 +1072,13 @@ export default function POSPage() {
                 children: (
                   <>
                     <div className="p-3 rounded bg-gray-50 mb-3">
-                      <Text className="block">Subtotal: <strong>{formatUsd(cartTotalUsd)}</strong></Text>
-                      <Text className="block">Subtotal (SSHL): <strong>{formatSshl(cartTotalUsd)}</strong></Text>
+                      <Text className="block">
+                        Subtotal: <strong>{formatUsd(cartTotalUsd)}</strong>
+                      </Text>
+                      <Text className="block">
+                        Subtotal (SSHL):{" "}
+                        <strong>{formatSshl(cartTotalUsd)}</strong>
+                      </Text>
                     </div>
 
                     <Form.Item name="customer_id" label="Customer">
@@ -866,15 +1094,27 @@ export default function POSPage() {
                       />
                     </Form.Item>
 
-                    <Button icon={<UserAddOutlined />} className="mb-3" onClick={() => setCustomerQuickOpen(true)}>
+                    <Button
+                      icon={<UserAddOutlined />}
+                      className="mb-3"
+                      onClick={() => setCustomerQuickOpen(true)}
+                    >
                       Create new customer
                     </Button>
 
-                    <Form.Item name="currency" label="Payment currency" rules={[{ required: true }]}>
+                    <Form.Item
+                      name="currency"
+                      label="Payment currency"
+                      rules={[{ required: true }]}
+                    >
                       <Segmented options={CURRENCY_OPTIONS} block />
                     </Form.Item>
 
-                    <Form.Item name="payment_method" label="Payment method" rules={[{ required: true }]}>
+                    <Form.Item
+                      name="payment_method"
+                      label="Payment method"
+                      rules={[{ required: true }]}
+                    >
                       <Segmented
                         options={[
                           { label: "Cash", value: "cash" },
@@ -890,7 +1130,12 @@ export default function POSPage() {
                         <span className="inline-flex items-center rounded-l-md border border-r-0 border-gray-300 bg-gray-50 px-3 text-sm text-gray-600">
                           $
                         </span>
-                        <InputNumber min={0} max={cartTotalUsd} className="w-full" step={0.5} />
+                        <InputNumber
+                          min={0}
+                          max={cartTotalUsd}
+                          className="w-full"
+                          step={0.5}
+                        />
                       </Space.Compact>
                     </Form.Item>
 
@@ -900,14 +1145,28 @@ export default function POSPage() {
 
                     <Form.Item noStyle shouldUpdate>
                       {() => {
-                        const currency = checkoutForm.getFieldValue("currency") as Currency;
-                        const discount = Number(checkoutForm.getFieldValue("discount") ?? 0);
+                        const currency = checkoutForm.getFieldValue(
+                          "currency",
+                        ) as Currency;
+                        const discount = Number(
+                          checkoutForm.getFieldValue("discount") ?? 0,
+                        );
                         const finalUsd = Math.max(0, cartTotalUsd - discount);
 
                         return (
                           <Card size="small" className="mb-3 bg-green-50">
-                            <Text className="block">Collect now: <strong>{currency === "USD" ? formatUsd(finalUsd) : formatSshl(finalUsd)}</strong></Text>
-                            <Text type="secondary" className="text-xs">Equivalent: {formatUsd(finalUsd)} / {formatSshl(finalUsd)}</Text>
+                            <Text className="block">
+                              Collect now:{" "}
+                              <strong>
+                                {currency === "USD"
+                                  ? formatUsd(finalUsd)
+                                  : formatSshl(finalUsd)}
+                              </strong>
+                            </Text>
+                            <Text type="secondary" className="text-xs">
+                              Equivalent: {formatUsd(finalUsd)} /{" "}
+                              {formatSshl(finalUsd)}
+                            </Text>
                           </Card>
                         );
                       }}
@@ -939,23 +1198,40 @@ export default function POSPage() {
                 children: (
                   <div className="space-y-3">
                     {cart.length === 0 ? (
-                      <Empty description="No items in cart" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+                      <Empty
+                        description="No items in cart"
+                        image={Empty.PRESENTED_IMAGE_SIMPLE}
+                      />
                     ) : (
                       <div className="max-h-72 overflow-y-auto pr-1 space-y-2">
                         {cart.map((item) => {
                           const lineUsd = item.unit_price_usd * item.quantity;
                           return (
-                            <div key={`${item.product_id}-${item.product_name}`} className="rounded border border-black/10 px-3 py-2">
+                            <div
+                              key={`${item.product_id}-${item.product_name}`}
+                              className="rounded border border-black/10 px-3 py-2"
+                            >
                               <div className="flex items-start justify-between gap-3">
                                 <div className="min-w-0">
-                                  <Text strong className="block truncate">{item.product_name}</Text>
-                                  <Text type="secondary" className="text-xs block">
-                                    {item.quantity} × {formatUsd(item.unit_price_usd)} ({formatSshl(item.unit_price_usd)})
+                                  <Text strong className="block truncate">
+                                    {item.product_name}
+                                  </Text>
+                                  <Text
+                                    type="secondary"
+                                    className="text-xs block"
+                                  >
+                                    {item.quantity} ×{" "}
+                                    {formatUsd(item.unit_price_usd)} (
+                                    {formatSshl(item.unit_price_usd)})
                                   </Text>
                                 </div>
                                 <div className="text-right shrink-0">
-                                  <Text strong className="block">{formatUsd(lineUsd)}</Text>
-                                  <Text type="secondary" className="text-xs">{formatSshl(lineUsd)}</Text>
+                                  <Text strong className="block">
+                                    {formatUsd(lineUsd)}
+                                  </Text>
+                                  <Text type="secondary" className="text-xs">
+                                    {formatSshl(lineUsd)}
+                                  </Text>
                                 </div>
                               </div>
                             </div>
@@ -975,7 +1251,9 @@ export default function POSPage() {
                       </div>
                       <Form.Item noStyle shouldUpdate>
                         {() => {
-                          const discount = Number(checkoutForm.getFieldValue("discount") ?? 0);
+                          const discount = Number(
+                            checkoutForm.getFieldValue("discount") ?? 0,
+                          );
                           const finalUsd = Math.max(0, cartTotalUsd - discount);
 
                           return (
@@ -983,11 +1261,15 @@ export default function POSPage() {
                               <Divider className="my-2" />
                               <div className="flex items-center justify-between gap-2">
                                 <Text type="secondary">Discount</Text>
-                                <Text>{formatUsd(discount)} / {formatSshl(discount)}</Text>
+                                <Text>
+                                  {formatUsd(discount)} / {formatSshl(discount)}
+                                </Text>
                               </div>
                               <div className="flex items-center justify-between gap-2">
                                 <Text strong>Total due</Text>
-                                <Text strong>{formatUsd(finalUsd)} / {formatSshl(finalUsd)}</Text>
+                                <Text strong>
+                                  {formatUsd(finalUsd)} / {formatSshl(finalUsd)}
+                                </Text>
                               </div>
                             </>
                           );
@@ -1008,16 +1290,28 @@ export default function POSPage() {
         onCancel={() => setCustomerQuickOpen(false)}
         footer={null}
       >
-        <Form form={quickCustomerForm} layout="vertical" onFinish={onQuickCreateCustomer}>
-          <Form.Item name="name" label="Customer name" rules={[{ required: true, message: "Name is required" }]}>
+        <Form
+          form={quickCustomerForm}
+          layout="vertical"
+          onFinish={onQuickCreateCustomer}
+        >
+          <Form.Item
+            name="name"
+            label="Customer name"
+            rules={[{ required: true, message: "Name is required" }]}
+          >
             <Input placeholder="Customer name" />
           </Form.Item>
           <Form.Item name="phone" label="Phone">
             <Input placeholder="Phone number" />
           </Form.Item>
           <div className="flex gap-2">
-            <Button block onClick={() => setCustomerQuickOpen(false)}>Cancel</Button>
-            <Button block type="primary" htmlType="submit">Create</Button>
+            <Button block onClick={() => setCustomerQuickOpen(false)}>
+              Cancel
+            </Button>
+            <Button block type="primary" htmlType="submit">
+              Create
+            </Button>
           </div>
         </Form>
       </Modal>
@@ -1028,8 +1322,17 @@ export default function POSPage() {
         onCancel={() => setReceiptOpen(false)}
         width={400}
         footer={[
-          <Button key="print" type="primary" icon={<PrinterOutlined />} onClick={handlePrint}>Print</Button>,
-          <Button key="close" onClick={() => setReceiptOpen(false)}>Close</Button>,
+          <Button
+            key="print"
+            type="primary"
+            icon={<PrinterOutlined />}
+            onClick={handlePrint}
+          >
+            Print
+          </Button>,
+          <Button key="close" onClick={() => setReceiptOpen(false)}>
+            Close
+          </Button>,
         ]}
       >
         {lastSale ? <Receipt sale={lastSale} shopName={shopName} /> : null}
@@ -1073,7 +1376,12 @@ function CartPanel({
         <div className="rounded-md border border-blue-200 bg-blue-50 px-3 py-2">
           <Text strong>{`Updating Order #${editingOrderId}`}</Text>
           <div>
-            <Button size="small" type="link" className="px-0!" onClick={onCancelEditOrder}>
+            <Button
+              size="small"
+              type="link"
+              className="px-0!"
+              onClick={onCancelEditOrder}
+            >
               Cancel update
             </Button>
           </div>
@@ -1082,7 +1390,13 @@ function CartPanel({
 
       <div className="flex justify-between items-center">
         <Text strong>{cartCount} items</Text>
-        <Button size="small" danger disabled={cart.length === 0} onClick={clearCart} icon={<DeleteOutlined />}>
+        <Button
+          size="small"
+          danger
+          disabled={cart.length === 0}
+          onClick={clearCart}
+          icon={<DeleteOutlined />}
+        >
           Clear
         </Button>
       </div>
@@ -1093,18 +1407,40 @@ function CartPanel({
         ) : (
           <div className="space-y-2">
             {cart.map((item) => (
-              <div key={item.product_id} className="border border-gray-200 rounded-md px-3 py-2">
+              <div
+                key={item.product_id}
+                className="border border-gray-200 rounded-md px-3 py-2"
+              >
                 <div className="flex justify-between gap-2">
-                  <Text strong className="truncate">{item.product_name}</Text>
-                  <Text>{displayPrice(item.unit_price_usd * item.quantity)}</Text>
+                  <Text strong className="truncate">
+                    {item.product_name}
+                  </Text>
+                  <Text>
+                    {displayPrice(item.unit_price_usd * item.quantity)}
+                  </Text>
                 </div>
                 <div className="flex items-center justify-between mt-1">
-                  <Text type="secondary" className="text-xs">{displayPrice(item.unit_price_usd)} each</Text>
+                  <Text type="secondary" className="text-xs">
+                    {displayPrice(item.unit_price_usd)} each
+                  </Text>
                   <Space size={4}>
-                    <Button size="small" icon={<MinusOutlined />} onClick={() => updateQty(item.product_id, -1)} />
+                    <Button
+                      size="small"
+                      icon={<MinusOutlined />}
+                      onClick={() => updateQty(item.product_id, -1)}
+                    />
                     <Text>{item.quantity}</Text>
-                    <Button size="small" icon={<PlusOutlined />} onClick={() => updateQty(item.product_id, 1)} />
-                    <Button size="small" danger icon={<DeleteOutlined />} onClick={() => removeItem(item.product_id)} />
+                    <Button
+                      size="small"
+                      icon={<PlusOutlined />}
+                      onClick={() => updateQty(item.product_id, 1)}
+                    />
+                    <Button
+                      size="small"
+                      danger
+                      icon={<DeleteOutlined />}
+                      onClick={() => removeItem(item.product_id)}
+                    />
                   </Space>
                 </div>
               </div>
@@ -1116,8 +1452,12 @@ function CartPanel({
       <Divider className="my-2" />
 
       <Card size="small">
-        <Text className="block">Total USD: <strong>{formatUsd(cartTotalUsd)}</strong></Text>
-        <Text className="block">Total SSHL: <strong>{formatSshl(cartTotalUsd)}</strong></Text>
+        <Text className="block">
+          Total USD: <strong>{formatUsd(cartTotalUsd)}</strong>
+        </Text>
+        <Text className="block">
+          Total SSHL: <strong>{formatSshl(cartTotalUsd)}</strong>
+        </Text>
       </Card>
 
       <Button
@@ -1144,10 +1484,16 @@ function Receipt({ sale, shopName }: { sale: Sale; shopName: string }) {
           alt={`${shopName} logo`}
           className="mx-auto mb-2 h-12 w-auto object-contain"
         />
-        <Text strong className="block text-base">{shopName}</Text>
-        <Text type="secondary" className="text-xs">Order #{sale.id}</Text>
+        <Text strong className="block text-base">
+          {shopName}
+        </Text>
+        <Text type="secondary" className="text-xs">
+          Order #{sale.id}
+        </Text>
         <br />
-        <Text type="secondary" className="text-xs">{new Date(sale.created_at).toLocaleString()}</Text>
+        <Text type="secondary" className="text-xs">
+          {new Date(sale.created_at).toLocaleString()}
+        </Text>
       </div>
 
       <Divider className="my-2" />
@@ -1170,10 +1516,14 @@ function Receipt({ sale, shopName }: { sale: Sale; shopName: string }) {
       {(sale.items ?? []).map((item, index) => (
         <div key={index} className="mb-1">
           <div className="flex justify-between gap-2">
-            <Text>{item.product_name} × {item.quantity}</Text>
+            <Text>
+              {item.product_name} × {item.quantity}
+            </Text>
             <Text>{`$${item.subtotal_usd.toFixed(2)}`}</Text>
           </div>
-          <Text type="secondary" className="text-xs block text-right">{item.subtotal_sos.toLocaleString()} SSHL</Text>
+          <Text type="secondary" className="text-xs block text-right">
+            {item.subtotal_sos.toLocaleString()} SSHL
+          </Text>
         </div>
       ))}
 
@@ -1197,7 +1547,9 @@ function Receipt({ sale, shopName }: { sale: Sale; shopName: string }) {
 
       <Divider className="my-2" />
       <div className="text-center">
-        <Text type="secondary" className="text-xs">Thank you for your visit!</Text>
+        <Text type="secondary" className="text-xs">
+          Thank you for your visit!
+        </Text>
       </div>
     </div>
   );

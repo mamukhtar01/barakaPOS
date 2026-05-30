@@ -147,3 +147,27 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   if (rows.length === 0) return Response.json({ error: "Not found" }, { status: 404 });
   return Response.json({ success: true });
 }
+
+export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const session = await getSession();
+  if (!session) return Response.json({ error: "Unauthorized" }, { status: 401 });
+
+  const { id } = await params;
+  const saleId = Number(id);
+
+  const { rows: saleRows } = await db.execute({
+    sql: "SELECT id, payment_status FROM sales WHERE id = ?",
+    args: [saleId],
+  });
+
+  if (saleRows.length === 0) return Response.json({ error: "Not found" }, { status: 404 });
+
+  if ((saleRows[0].payment_status as string) !== "unpaid") {
+    return Response.json({ error: "Only unpaid orders can be cancelled" }, { status: 400 });
+  }
+
+  await db.execute({ sql: "DELETE FROM sale_items WHERE sale_id = ?", args: [saleId] });
+  await db.execute({ sql: "DELETE FROM sales WHERE id = ?", args: [saleId] });
+
+  return Response.json({ success: true });
+}
