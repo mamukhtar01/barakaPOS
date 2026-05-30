@@ -586,8 +586,8 @@ export default function POSPage() {
   const handlePrint = () => window.print();
 
   return (
-    <div className="h-screen bg-gray-50 flex flex-col">
-      <header className="h-14 bg-green-700 text-white px-3 sm:px-4 flex items-center justify-between">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
+      <header className="sticky top-0 z-30 h-14 bg-green-700 text-white px-3 sm:px-4 flex items-center justify-between">
         <Space>
           <AppstoreOutlined />
           <Text strong className="text-white!">{shopName}</Text>
@@ -616,9 +616,9 @@ export default function POSPage() {
         </Space>
       </header>
 
-      <main className="flex-1 overflow-hidden p-3 sm:p-4 md:pb-96 lg:pb-4">
-        <Row gutter={[12, 12]} className="h-full">
-          <Col xs={24} lg={16} className="h-full flex flex-col gap-3 overflow-hidden">
+      <main className="flex-1 scroll-smooth p-3 sm:p-4 md:pb-96 lg:pb-4 lg:h-[calc(100vh-3.5rem)] lg:overflow-hidden">
+        <Row gutter={[12, 12]} className="lg:h-full">
+          <Col xs={24} lg={16} className="flex flex-col gap-3 lg:h-full lg:overflow-hidden">
             <Card size="small">
               <div className="flex gap-2 flex-wrap">
                 <Input
@@ -641,7 +641,7 @@ export default function POSPage() {
               </div>
             </Card>
 
-            <Card size="small" className="flex-1 overflow-hidden" styles={{ body: { height: "100%", overflowY: "auto" } }}>
+            <Card size="small" className="lg:flex-1 overflow-y-auto scroll-smooth">
               {loadingProducts ? (
                 <div className="py-20 text-center"><Spin /></div>
               ) : products.length === 0 ? (
@@ -676,7 +676,8 @@ export default function POSPage() {
             </Card>
           </Col>
 
-          <Col xs={24} lg={8} className="h-full hidden lg:flex flex-col gap-3 min-h-0">
+          <Col xs={24} lg={8}>
+            <div className="hidden lg:flex flex-col gap-3 h-full min-h-0">
             <Card
               title={`Cart (${cartCount})`}
               size="small"
@@ -726,6 +727,7 @@ export default function POSPage() {
                 </div>
               )}
             </Card>
+            </div>
           </Col>
         </Row>
       </main>

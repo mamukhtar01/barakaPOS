@@ -118,7 +118,7 @@ export default function LoginPage() {
               </div>
             </Form.Item>
 
-            <Form.Item className="!mb-0">
+            <Form.Item className="mb-0!">
               <Button
                 type="primary"
                 htmlType="submit"
