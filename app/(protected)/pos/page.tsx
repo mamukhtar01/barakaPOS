@@ -149,7 +149,7 @@ export default function POSPage() {
 
   const fetchRecentOrders = useCallback(async () => {
     setLoadingOrders(true);
-    const res = await fetch("/api/sales?limit=12");
+    const res = await fetch("/api/sales?limit=25");
     if (res.ok) {
       const data = await res.json();
       setRecentOrders((data.sales ?? []).map(normalizeSale));
