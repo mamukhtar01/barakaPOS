@@ -732,7 +732,7 @@ export default function POSPage() {
   const handlePrint = () => window.print();
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="h-[100dvh] overflow-hidden bg-gray-50 flex flex-col">
       <header className="sticky top-0 z-30 h-14 bg-green-700 text-white px-3 sm:px-4 flex items-center justify-between">
         <Space>
           <AppstoreOutlined />
@@ -746,7 +746,6 @@ export default function POSPage() {
             size="small"
             icon={<ClockCircleOutlined />}
             onClick={() => setOrdersDrawerOpen(true)}
-            className="lg:hidden"
           />
           <Segmented
             options={CURRENCY_OPTIONS}
@@ -769,12 +768,15 @@ export default function POSPage() {
         </Space>
       </header>
 
-      <main className="flex-1 scroll-smooth p-3 sm:p-4 md:pb-96 lg:pb-4 lg:h-[calc(100vh-3.5rem)] lg:overflow-hidden">
-        <Row gutter={[12, 12]} className="lg:h-full">
+      <main className="flex flex-col flex-1 min-h-0 overflow-hidden scroll-smooth p-3 sm:p-4 md:pb-[42dvh] lg:pb-4">
+        <Row
+          gutter={[12, 12]}
+          className="flex-1 h-full min-h-0 md:overflow-hidden"
+        >
           <Col
             xs={24}
             lg={16}
-            className="flex flex-col gap-3 lg:h-full lg:overflow-hidden"
+            className="grid h-full min-h-0 grid-rows-[auto,1fr] gap-3 overflow-hidden"
           >
             <Card size="small">
               <div className="flex gap-2 flex-wrap">
@@ -803,74 +805,102 @@ export default function POSPage() {
 
             <Card
               size="small"
-              className="lg:flex-1 overflow-y-auto scroll-smooth"
+              className="h-full min-h-0"
+              styles={{
+                body: {
+                  display: "flex",
+                  flexDirection: "column",
+                  height: "100%",
+                  minHeight: 0,
+                  overflow: "hidden",
+                  paddingTop: 12,
+                },
+              }}
             >
-              {loadingProducts ? (
-                <div className="py-20 text-center">
-                  <Spin />
-                </div>
-              ) : products.length === 0 ? (
-                <Empty description="No products found" />
-              ) : (
-                <Row gutter={[10, 10]}>
-                  {products.map((product) => {
-                    const image = getProductImage(product);
-                    return (
-                      <Col key={product.id} xs={12} sm={8} md={6}>
-                        <Card
-                          hoverable
-                          size="small"
-                          className="h-full"
-                          styles={{ body: { padding: 10 } }}
-                          onClick={() => addToCart(product)}
-                        >
-                          {image ? (
-                            <Image
-                              src={image}
-                              alt={`Image of ${product.name}`}
-                              preview={false}
-                              width="100%"
-                              height={84}
-                              className="rounded object-cover mb-2"
-                            />
-                          ) : (
-                            <div className="h-21 rounded bg-green-50 flex items-center justify-center mb-2">
-                              🍽️
-                            </div>
-                          )}
-                          <Text strong className="block truncate">
-                            {product.name}
-                          </Text>
-                          {product.category_name ? (
-                            <Text type="secondary" className="text-xs">
-                              {product.category_name}
+              <div
+                className="h-full min-h-0 flex-1 scroll-smooth pr-1"
+                style={{
+                  overflowY: "auto",
+                  height: "100%",
+                  minHeight: 0,
+                  paddingBottom: 88,
+                  scrollPaddingBottom: 88,
+                  scrollBehavior: "smooth",
+                  WebkitOverflowScrolling: "touch",
+                  overscrollBehavior: "contain",
+                }}
+              >
+                {loadingProducts ? (
+                  <div className="py-20 text-center">
+                    <Spin />
+                  </div>
+                ) : products.length === 0 ? (
+                  <Empty description="No products found" />
+                ) : (
+                  <Row gutter={[10, 10]} style={{ marginBottom: 0 }}>
+                    {products.map((product) => {
+                      const image = getProductImage(product);
+                      return (
+                        <Col key={product.id} xs={12} sm={8} md={6}>
+                          <Card
+                            hoverable
+                            size="small"
+                            className="h-full"
+                            styles={{ body: { padding: 10 } }}
+                            onClick={() => addToCart(product)}
+                          >
+                            {image ? (
+                              <Image
+                                src={image}
+                                alt={`Image of ${product.name}`}
+                                preview={false}
+                                width="100%"
+                                height={84}
+                                className="rounded object-cover mb-2"
+                              />
+                            ) : (
+                              <div className="h-21 rounded bg-green-50 flex items-center justify-center mb-2">
+                                🍽️
+                              </div>
+                            )}
+                            <Text strong className="block truncate">
+                              {product.name}
                             </Text>
-                          ) : null}
-                          <Text className="text-green-700 block mt-1">
-                            {displayPrice(Number(product.sale_price_usd))}
-                          </Text>
-                        </Card>
-                      </Col>
-                    );
-                  })}
-                </Row>
-              )}
+                            {product.category_name ? (
+                              <Text type="secondary" className="text-xs">
+                                {product.category_name}
+                              </Text>
+                            ) : null}
+                            <Text className="text-green-700 block mt-1">
+                              {displayPrice(Number(product.sale_price_usd))}
+                            </Text>
+                          </Card>
+                        </Col>
+                      );
+                    })}
+                  </Row>
+                )}
+              </div>
             </Card>
           </Col>
 
-          <Col xs={24} lg={8}>
+          <Col
+            xs={24}
+            lg={8}
+            className="hidden lg:block h-full min-h-0 md:overflow-hidden"
+          >
             <div className="hidden lg:flex flex-col gap-3 h-full min-h-0">
               <Card
                 title={`Cart (${cartCount})`}
                 size="small"
-                className="shrink-0"
+                className="h-full min-h-0"
                 styles={{
                   body: {
                     paddingTop: 12,
-                    maxHeight: "52vh",
                     display: "flex",
                     flexDirection: "column",
                     minHeight: 0,
+                    height: "100%",
                   },
                 }}
               >
@@ -902,30 +932,6 @@ export default function POSPage() {
                   }}
                 />
               </Card>
-
-              <Card
-                title="Recent orders"
-                size="small"
-                className="flex-1 overflow-hidden flex flex-col"
-                styles={{ body: { flex: 1, overflowY: "auto", minHeight: 0 } }}
-                extra={
-                  <Button size="small" onClick={() => void fetchRecentOrders()}>
-                    Refresh
-                  </Button>
-                }
-              >
-                {loadingOrders ? (
-                  <div className="text-center py-10">
-                    <Spin />
-                  </div>
-                ) : recentOrders.length === 0 ? (
-                  <Empty description="No recent orders" />
-                ) : (
-                  <div className="h-full overflow-y-auto pr-1 space-y-2">
-                    {recentOrders.map((order) => renderOrderItem(order))}
-                  </div>
-                )}
-              </Card>
             </div>
           </Col>
         </Row>
@@ -939,10 +945,10 @@ export default function POSPage() {
           styles={{
             body: {
               paddingTop: 12,
-              maxHeight: "46vh",
-              minHeight: 300,
+              maxHeight: "38dvh",
               display: "flex",
               flexDirection: "column",
+              minHeight: 260,
             },
           }}
         >
@@ -1007,7 +1013,14 @@ export default function POSPage() {
         ) : recentOrders.length === 0 ? (
           <Empty description="No recent orders" />
         ) : (
-          <div className="space-y-2 overflow-y-auto flex-1">
+          <div
+            className="space-y-2 overflow-y-auto flex-1 pb-4"
+            style={{
+              scrollBehavior: "smooth",
+              WebkitOverflowScrolling: "touch",
+              overscrollBehavior: "contain",
+            }}
+          >
             {recentOrders.map((order) => renderOrderItem(order, true))}
           </div>
         )}
@@ -1401,7 +1414,14 @@ function CartPanel({
         </Button>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+      <div
+        className="min-h-0 flex-1 overflow-y-auto pr-1 pb-28"
+        style={{
+          scrollBehavior: "smooth",
+          WebkitOverflowScrolling: "touch",
+          overscrollBehavior: "contain",
+        }}
+      >
         {cart.length === 0 ? (
           <Empty description="No items" />
         ) : (
@@ -1449,28 +1469,30 @@ function CartPanel({
         )}
       </div>
 
-      <Divider className="my-2" />
+      <div className="sticky bottom-0 z-10 mt-auto shrink-0 bg-white pt-2">
+        <Divider className="my-2" />
 
-      <Card size="small">
-        <Text className="block">
-          Total USD: <strong>{formatUsd(cartTotalUsd)}</strong>
-        </Text>
-        <Text className="block">
-          Total SSHL: <strong>{formatSshl(cartTotalUsd)}</strong>
-        </Text>
-      </Card>
+        <Card size="small">
+          <Text className="block">
+            Total USD: <strong>{formatUsd(cartTotalUsd)}</strong>
+          </Text>
+          <Text className="block">
+            Total SSHL: <strong>{formatSshl(cartTotalUsd)}</strong>
+          </Text>
+        </Card>
 
-      <Button
-        type="primary"
-        block
-        size="large"
-        icon={<DollarOutlined />}
-        disabled={cart.length === 0}
-        loading={checkoutLoading}
-        onClick={onCheckout}
-      >
-        {editingOrderId ? "Save order updates" : "Place order"}
-      </Button>
+        <Button
+          type="primary"
+          block
+          size="large"
+          icon={<DollarOutlined />}
+          disabled={cart.length === 0}
+          loading={checkoutLoading}
+          onClick={onCheckout}
+        >
+          {editingOrderId ? "Save order updates" : "Place order"}
+        </Button>
+      </div>
     </div>
   );
 }
