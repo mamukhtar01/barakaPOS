@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Layout, Menu, Typography, Button, Breadcrumb, Space, Drawer } from "antd";
+import { Layout, Menu, Typography, Button, Breadcrumb, Space, Drawer, Grid, FloatButton } from "antd";
 import {
   DashboardOutlined, AppstoreOutlined, TagsOutlined, UserOutlined,
   BarChartOutlined, TeamOutlined, SettingOutlined, ShopOutlined,
@@ -27,6 +27,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const { user, loading, logout } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const screens = Grid.useBreakpoint();
+  const isMobile = !screens.md;
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   useEffect(() => {
@@ -55,51 +57,55 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   return (
     <Layout className="min-h-screen">
       {/* Desktop Sidebar */}
-      <Sider
-        width={220}
-        className="hidden md:flex flex-col bg-white shadow-md"
-        style={{ position: "fixed", height: "100vh", left: 0, top: 0, overflow: "auto", zIndex: 20 }}
-      >
-        <div className="flex items-center gap-2 px-4 py-4 border-b">
-          <ShopOutlined className="text-green-600 text-xl" />
-          <Text strong className="text-green-700">Baraka POS</Text>
-        </div>
-        {SideMenu}
-        <div className="p-3 border-t">
-          <Button block icon={<ShopOutlined />} onClick={() => router.push("/pos")}>POS</Button>
-          <Button block danger icon={<LogoutOutlined />} onClick={logout} className="mt-2">Logout</Button>
-        </div>
-      </Sider>
+      {!isMobile && (
+        <Sider
+          width={220}
+          className="flex flex-col bg-white shadow-md"
+          style={{ position: "fixed", height: "100vh", left: 0, top: 0, overflow: "auto", zIndex: 20 }}
+        >
+          <div className="flex items-center gap-2 px-4 py-4 border-b">
+            <ShopOutlined className="text-green-600 text-xl" />
+            <Text strong className="text-green-700">Baraka POS</Text>
+          </div>
+          {SideMenu}
+          <div className="p-3 border-t">
+            <Button block icon={<ShopOutlined />} onClick={() => router.push("/pos")}>POS</Button>
+            <Button block danger icon={<LogoutOutlined />} onClick={logout} className="mt-2">Logout</Button>
+          </div>
+        </Sider>
+      )}
 
       {/* Mobile Drawer */}
-      <Drawer
-        placement="left"
-        open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
-        size={220}
-        styles={{ body: { padding: 0 } }}
-        className="md:hidden"
-      >
-        <div className="flex items-center gap-2 px-4 py-4 border-b">
-          <ShopOutlined className="text-green-600 text-xl" />
-          <Text strong className="text-green-700">Baraka POS</Text>
-        </div>
-        {SideMenu}
-        <div className="p-3 border-t">
-          <Button block icon={<ShopOutlined />} onClick={() => { router.push("/pos"); setDrawerOpen(false); }}>POS</Button>
-          <Button block danger icon={<LogoutOutlined />} onClick={logout} className="mt-2">Logout</Button>
-        </div>
-      </Drawer>
+      {isMobile && (
+        <Drawer
+          placement="left"
+          open={drawerOpen}
+          onClose={() => setDrawerOpen(false)}
+          width={220}
+          styles={{ body: { padding: 0 } }}
+        >
+          <div className="flex items-center gap-2 px-4 py-4 border-b">
+            <ShopOutlined className="text-green-600 text-xl" />
+            <Text strong className="text-green-700">Baraka POS</Text>
+          </div>
+          {SideMenu}
+          <div className="p-3 border-t">
+            <Button block icon={<ShopOutlined />} onClick={() => { router.push("/pos"); setDrawerOpen(false); }}>POS</Button>
+            <Button block danger icon={<LogoutOutlined />} onClick={logout} className="mt-2">Logout</Button>
+          </div>
+        </Drawer>
+      )}
 
       <Layout className="admin-content-offset">
         <Header className="bg-white shadow-sm flex items-center justify-between px-4 h-14">
           <Space>
-            <Button
-              icon={<MenuOutlined />}
-              onClick={() => setDrawerOpen(true)}
-              className="md:hidden"
-              type="text"
-            />
+            {isMobile && (
+              <Button
+                icon={<MenuOutlined />}
+                onClick={() => setDrawerOpen(true)}
+                type="text"
+              />
+            )}
             <Breadcrumb items={[{ title: "Admin" }, { title: breadcrumb }]} />
           </Space>
           <Text type="secondary" className="text-sm">{user.username}</Text>
@@ -108,6 +114,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           {children}
         </Content>
       </Layout>
+      {isMobile ? (
+        <FloatButton
+          icon={<MenuOutlined />}
+          type="primary"
+          shape="circle"
+          onClick={() => setDrawerOpen(true)}
+          tooltip="Open menu"
+          style={{ right: 16, bottom: 20, width: 42, height: 42, zIndex: 1050, opacity: 0.92 }}
+        />
+      ) : null}
     </Layout>
   );
 }

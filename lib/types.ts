@@ -55,6 +55,7 @@ export interface Sale {
   total_sos: number;
   discount: number;
   notes: string | null;
+  remarks: string | null;
   created_at: string;
   items?: SaleItem[];
 }
