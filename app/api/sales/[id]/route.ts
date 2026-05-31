@@ -29,8 +29,9 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   const { id } = await params;
   const saleId = Number(id);
   const body = await request.json();
-  const { payment_status, items } = body as {
+  const { payment_status, is_done, items } = body as {
     payment_status?: "paid" | "unpaid";
+    is_done?: boolean;
     items?: Array<{
       product_id?: number | null;
       product_name: string;
@@ -135,13 +136,43 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     return Response.json({ sale: { ...updatedSaleRows[0], items: updatedItemRows } });
   }
 
-  if (payment_status !== "paid" && payment_status !== "unpaid") {
-    return Response.json({ error: "Invalid payment status" }, { status: 400 });
+  const hasPaymentStatus = payment_status === "paid" || payment_status === "unpaid";
+  const hasIsDone = typeof is_done === "boolean";
+
+  if (!hasPaymentStatus && !hasIsDone) {
+    return Response.json(
+      { error: "Invalid payload: provide payment_status and/or is_done" },
+      { status: 400 }
+    );
+  }
+
+  const { rows: currentSaleRows } = await db.execute({
+    sql: "SELECT id, payment_status, is_done FROM sales WHERE id = ?",
+    args: [saleId],
+  });
+
+  if (currentSaleRows.length === 0) {
+    return Response.json({ error: "Not found" }, { status: 404 });
+  }
+
+  const currentSale = currentSaleRows[0];
+  const currentPaymentStatus =
+    (currentSale.payment_status as "paid" | "unpaid") ?? "paid";
+  const currentIsDone = Boolean(Number(currentSale.is_done ?? 0));
+
+  const nextPaymentStatus = hasPaymentStatus ? payment_status : currentPaymentStatus;
+  const nextIsDone = hasIsDone ? is_done : currentIsDone;
+
+  if (nextIsDone && nextPaymentStatus !== "paid") {
+    return Response.json(
+      { error: "Only paid orders can be marked as done" },
+      { status: 400 }
+    );
   }
 
   const { rows } = await db.execute({
-    sql: "UPDATE sales SET payment_status = ? WHERE id = ? RETURNING id",
-    args: [payment_status, saleId],
+    sql: "UPDATE sales SET payment_status = ?, is_done = ? WHERE id = ? RETURNING id",
+    args: [nextPaymentStatus, nextIsDone ? 1 : 0, saleId],
   });
 
   if (rows.length === 0) return Response.json({ error: "Not found" }, { status: 404 });

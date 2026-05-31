@@ -56,6 +56,7 @@ export interface Sale {
   discount: number;
   notes: string | null;
   remarks: string | null;
+  is_done: boolean;
   created_at: string;
   items?: SaleItem[];
 }

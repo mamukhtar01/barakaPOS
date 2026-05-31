@@ -68,11 +68,22 @@ function getProductImage(product: Product) {
 }
 
 function normalizeSale(raw: Sale): Sale {
+  const rawIsDone = (raw as { is_done?: unknown }).is_done;
+  const normalizedIsDone =
+    typeof rawIsDone === "boolean"
+      ? rawIsDone
+      : typeof rawIsDone === "number"
+        ? rawIsDone === 1
+        : typeof rawIsDone === "string"
+          ? rawIsDone === "1" || rawIsDone.toLowerCase() === "true"
+          : false;
+
   return {
     ...raw,
     // Legacy rows can still contain SOS and older rows may not have payment_status yet.
     currency: raw.currency === "SOS" ? "SSHL" : raw.currency,
     payment_status: raw.payment_status ?? "paid",
+    is_done: normalizedIsDone,
   };
 }
 
@@ -93,6 +104,10 @@ export default function POSPage() {
   const [savingOrderItemsId, setSavingOrderItemsId] = useState<number | null>(
     null,
   );
+  const [markingDoneOrderId, setMarkingDoneOrderId] = useState<number | null>(
+    null,
+  );
+  const [reopeningOrderId, setReopeningOrderId] = useState<number | null>(null);
   const [orderDetailsById, setOrderDetailsById] = useState<
     Record<number, Sale>
   >({});
@@ -112,6 +127,9 @@ export default function POSPage() {
 
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
   const [ordersDrawerOpen, setOrdersDrawerOpen] = useState(false);
+  const [ordersTabKey, setOrdersTabKey] = useState<"pending" | "completed">(
+    "pending",
+  );
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [checkoutTabKey, setCheckoutTabKey] = useState<"checkout" | "details">(
     "checkout",
@@ -291,6 +309,14 @@ export default function POSPage() {
     () => new Map(customers.map((customer) => [customer.id, customer])),
     [customers],
   );
+  const pendingRecentOrders = useMemo(
+    () => recentOrders.filter((order) => !order.is_done),
+    [recentOrders],
+  );
+  const completedRecentOrders = useMemo(
+    () => recentOrders.filter((order) => order.is_done),
+    [recentOrders],
+  );
 
   const formatUsd = (usd: number) => `$${usd.toFixed(2)}`;
   const formatSshl = (usd: number, rate = exchangeRate) =>
@@ -417,6 +443,56 @@ export default function POSPage() {
     message.success("Order marked as paid");
     await fetchRecentOrders();
     await fetchOrderDetails(id);
+  };
+
+  const markOrderDone = async (id: number) => {
+    setMarkingDoneOrderId(id);
+    try {
+      const res = await fetch(`/api/sales/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ is_done: true }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        message.error(data.error ?? "Failed to mark order as done");
+        return;
+      }
+
+      message.success("Order marked as done");
+      await fetchRecentOrders();
+      await fetchOrderDetails(id);
+    } catch {
+      message.error("Network error while marking order as done");
+    } finally {
+      setMarkingDoneOrderId(null);
+    }
+  };
+
+  const reopenOrder = async (id: number) => {
+    setReopeningOrderId(id);
+    try {
+      const res = await fetch(`/api/sales/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ is_done: false }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        message.error(data.error ?? "Failed to reopen order");
+        return;
+      }
+
+      message.success("Order reopened");
+      await fetchRecentOrders();
+      await fetchOrderDetails(id);
+    } catch {
+      message.error("Network error while reopening order");
+    } finally {
+      setReopeningOrderId(null);
+    }
   };
 
   const cancelOrder = async (id: number) => {
@@ -569,6 +645,9 @@ export default function POSPage() {
     const isExpanded = expandedOrderId === order.id;
     const isSavingItems = savingOrderItemsId === order.id;
     const isPaid = order.payment_status === "paid";
+    const isDone = order.is_done;
+    const isMarkingDone = markingDoneOrderId === order.id;
+    const isReopening = reopeningOrderId === order.id;
     const rowClassName = isPaid
       ? "border-emerald-300 bg-emerald-50/45"
       : "border-amber-300 bg-amber-50/55";
@@ -593,6 +672,11 @@ export default function POSPage() {
                 <Tag color={isPaid ? "green" : "orange"}>
                   {isPaid ? "Paid" : "Unpaid"}
                 </Tag>
+                {isDone ? (
+                  <Tag color="blue" icon={<CheckCircleOutlined />}>
+                    Completed
+                  </Tag>
+                ) : null}
                 <Text type="secondary" className="text-xs">
                   {isExpanded ? <UpOutlined /> : <DownOutlined />}
                 </Text>
@@ -652,6 +736,32 @@ export default function POSPage() {
                       }}
                     >
                       Mark as paid
+                    </Button>
+                  ) : null}
+                  {detail.payment_status === "paid" && !detail.is_done ? (
+                    <Button
+                      size="small"
+                      type="primary"
+                      ghost
+                      loading={isMarkingDone}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        void markOrderDone(order.id);
+                      }}
+                    >
+                      Mark done
+                    </Button>
+                  ) : null}
+                  {detail.is_done ? (
+                    <Button
+                      size="small"
+                      loading={isReopening}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        void reopenOrder(order.id);
+                      }}
+                    >
+                      Reopen
                     </Button>
                   ) : null}
                   {detail.payment_status === "unpaid" ? (
@@ -1007,24 +1117,58 @@ export default function POSPage() {
           body: { display: "flex", flexDirection: "column", minHeight: 0 },
         }}
       >
-        {loadingOrders ? (
-          <div className="text-center py-10">
-            <Spin />
-          </div>
-        ) : recentOrders.length === 0 ? (
-          <Empty description="No recent orders" />
-        ) : (
-          <div
-            className="space-y-2 overflow-y-auto flex-1 pb-4"
-            style={{
-              scrollBehavior: "smooth",
-              WebkitOverflowScrolling: "touch",
-              overscrollBehavior: "contain",
-            }}
-          >
-            {recentOrders.map((order) => renderOrderItem(order, true))}
-          </div>
-        )}
+        <Tabs
+          activeKey={ordersTabKey}
+          onChange={(key) => setOrdersTabKey(key as "pending" | "completed")}
+          items={[
+            {
+              key: "pending",
+              label: `Pending (${pendingRecentOrders.length})`,
+              children: loadingOrders ? (
+                <div className="text-center py-10">
+                  <Spin />
+                </div>
+              ) : pendingRecentOrders.length === 0 ? (
+                <Empty description="No pending orders" />
+              ) : (
+                <div
+                  className="space-y-2 overflow-y-auto pb-4 max-h-[65dvh]"
+                  style={{
+                    scrollBehavior: "smooth",
+                    WebkitOverflowScrolling: "touch",
+                    overscrollBehavior: "contain",
+                  }}
+                >
+                  {pendingRecentOrders.map((order) => renderOrderItem(order, true))}
+                </div>
+              ),
+            },
+            {
+              key: "completed",
+              label: `Completed (${completedRecentOrders.length})`,
+              children: loadingOrders ? (
+                <div className="text-center py-10">
+                  <Spin />
+                </div>
+              ) : completedRecentOrders.length === 0 ? (
+                <Empty description="No completed orders" />
+              ) : (
+                <div
+                  className="space-y-2 overflow-y-auto pb-4 max-h-[65dvh]"
+                  style={{
+                    scrollBehavior: "smooth",
+                    WebkitOverflowScrolling: "touch",
+                    overscrollBehavior: "contain",
+                  }}
+                >
+                  {completedRecentOrders.map((order) =>
+                    renderOrderItem(order, true),
+                  )}
+                </div>
+              ),
+            },
+          ]}
+        />
       </Drawer>
 
       <Drawer
