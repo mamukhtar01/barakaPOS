@@ -11,7 +11,7 @@ import {
   Drawer,
   Empty,
   Form,
-  Image,
+  Image as AntImage,
   Input,
   InputNumber,
   Modal,
@@ -44,6 +44,7 @@ import {
   UserAddOutlined,
 } from "@ant-design/icons";
 import { useAuth } from "@/components/ClientProvider";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import type {
   CartItem,
@@ -732,7 +733,7 @@ export default function POSPage() {
   const handlePrint = () => window.print();
 
   return (
-    <div className="h-[100dvh] overflow-hidden bg-gray-50 flex flex-col">
+    <div className="h-dvh overflow-hidden bg-gray-50 flex flex-col">
       <header className="sticky top-0 z-30 h-14 bg-green-700 text-white px-3 sm:px-4 flex items-center justify-between">
         <Space>
           <AppstoreOutlined />
@@ -850,7 +851,7 @@ export default function POSPage() {
                             onClick={() => addToCart(product)}
                           >
                             {image ? (
-                              <Image
+                              <AntImage
                                 src={image}
                                 alt={`Image of ${product.name}`}
                                 preview={false}
@@ -1499,12 +1500,18 @@ function CartPanel({
 
 function Receipt({ sale, shopName }: { sale: Sale; shopName: string }) {
   return (
-    <div id="receipt" className="font-mono text-sm">
+    <div
+      id="receipt"
+      className="font-mono text-sm text-black font-bold pl-7 pr-2 py-1 [&_.ant-typography]:text-black! [&_.ant-typography]:font-bold!"
+      style={{ marginLeft: 12 }}
+    >
       <div className="text-center mb-2">
-        <img
+        <Image
           src="/logo.png"
           alt={`${shopName} logo`}
-          className="mx-auto mb-2 h-12 w-auto object-contain"
+          width={224}
+          height={56}
+          className="mx-auto mb-2 h-14 w-auto object-contain"
         />
         <Text strong className="block text-base">
           {shopName}
@@ -1565,6 +1572,19 @@ function Receipt({ sale, shopName }: { sale: Sale; shopName: string }) {
       <div className="flex justify-between mb-1">
         <Text strong>Total (SSHL)</Text>
         <Text strong>{sale.total_sos.toLocaleString()} SSHL</Text>
+      </div>
+
+      <Divider className="my-2" />
+
+      <div className="mb-1 flex justify-center gap-8 sm:gap-12 print:gap-16">
+        <div className="flex items-center gap-1.5">
+          <Text>ZAAD:</Text>
+          <Text>519707</Text>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <Text>EDAHAB:</Text>
+          <Text>760083</Text>
+        </div>
       </div>
 
       <Divider className="my-2" />
