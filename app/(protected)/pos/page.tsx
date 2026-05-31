@@ -1499,6 +1499,15 @@ function CartPanel({
 }
 
 function Receipt({ sale, shopName }: { sale: Sale; shopName: string }) {
+  type ReceiptItem = Sale["items"] extends Array<infer Item> | undefined
+    ? Item
+    : never;
+
+  const formatReceiptItemLineTotal = (item: ReceiptItem) =>
+    sale.currency === "USD"
+      ? `$${item.subtotal_usd.toFixed(2)}`
+      : `${item.subtotal_sos.toLocaleString()} SSHL`;
+
   return (
     <div
       id="receipt"
@@ -1548,11 +1557,8 @@ function Receipt({ sale, shopName }: { sale: Sale; shopName: string }) {
             <Text>
               {item.product_name} × {item.quantity}
             </Text>
-            <Text>{`$${item.subtotal_usd.toFixed(2)}`}</Text>
+            <Text>{formatReceiptItemLineTotal(item)}</Text>
           </div>
-          <Text type="secondary" className="text-xs block text-right">
-            {item.subtotal_sos.toLocaleString()} SSHL
-          </Text>
         </div>
       ))}
 
