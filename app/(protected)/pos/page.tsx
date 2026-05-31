@@ -1118,6 +1118,7 @@ export default function POSPage() {
         }}
       >
         <Tabs
+          centered
           activeKey={ordersTabKey}
           onChange={(key) => setOrdersTabKey(key as "pending" | "completed")}
           items={[
