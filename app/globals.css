@@ -42,6 +42,7 @@ body {
     top: 0;
     left: 0;
     width: 80mm;
+    z-index: 9999;
   }
 }
 

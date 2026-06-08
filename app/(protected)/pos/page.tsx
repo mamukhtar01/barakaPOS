@@ -1663,11 +1663,12 @@ function Receipt({ sale, shopName }: { sale: Sale; shopName: string }) {
         <Image
           src="/logo.png"
           alt={`${shopName} logo`}
-          width={224}
-          height={56}
-          className="mx-auto mb-2 h-14 w-auto object-contain"
+          width={320}
+          height={64}
+          className="mx-auto mb-2 h-16 w-auto object-contain"
         />
-        <Text strong className="block text-base">
+        <Text strong   className="block text-lg! uppercase text-red-500! mb-2"
+>
           {shopName}
         </Text>
         <Text type="secondary" className="text-xs">
@@ -1727,13 +1728,15 @@ function Receipt({ sale, shopName }: { sale: Sale; shopName: string }) {
 
       <Divider className="my-2" />
 
-      <div className="mb-1 flex justify-center gap-8 sm:gap-12 print:gap-16">
+      <div className="mb-1 flex justify-center gap-8 sm:gap-8 print:gap-8">
         <div className="flex items-center gap-1.5">
-          <Text>ZAAD:</Text>
+          <Text code>ZAAD:</Text>
           <Text>519707</Text>
         </div>
         <div className="flex items-center gap-1.5">
-          <Text>EDAHAB:</Text>
+          <Text code style={{
+            color: "red"
+          }}>EDAHAB:</Text>
           <Text>760083</Text>
         </div>
       </div>
