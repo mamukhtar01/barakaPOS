@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Card, Col, Row, Statistic, Typography, Spin } from "antd";
-import { DollarOutlined, ShoppingCartOutlined, UserOutlined, AppstoreOutlined } from "@ant-design/icons";
+import { DollarOutlined, ShoppingCartOutlined, UserOutlined, AppstoreOutlined, ExclamationCircleOutlined } from "@ant-design/icons";
 
 const { Title } = Typography;
 
@@ -10,6 +10,8 @@ interface Summary {
   today: { total_usd: number; cnt: number };
   month: { total_usd: number; cnt: number };
   total: { total_usd: number; cnt: number };
+  todayUnpaid: { total_usd: number; cnt: number };
+  monthUnpaid: { total_usd: number; cnt: number };
 }
 
 export default function AdminDashboard() {
@@ -36,7 +38,7 @@ export default function AdminDashboard() {
     <div>
       <Title level={4} className="mb-4">Dashboard</Title>
       <Row gutter={[16, 16]}>
-        <Col xs={24} sm={12} lg={6}>
+        <Col xs={24} sm={12} lg={8}>
           <Card>
             <Statistic
               title="Today's Sales"
@@ -49,7 +51,7 @@ export default function AdminDashboard() {
             <div className="text-gray-400 text-xs mt-1">{summary?.today.cnt ?? 0} transactions</div>
           </Card>
         </Col>
-        <Col xs={24} sm={12} lg={6}>
+        <Col xs={24} sm={12} lg={8}>
           <Card>
             <Statistic
               title="Monthly Sales"
@@ -62,7 +64,7 @@ export default function AdminDashboard() {
             <div className="text-gray-400 text-xs mt-1">{summary?.month.cnt ?? 0} transactions</div>
           </Card>
         </Col>
-        <Col xs={24} sm={12} lg={6}>
+        <Col xs={24} sm={12} lg={8}>
           <Card>
             <Statistic
               title="Total Sales"
@@ -74,7 +76,33 @@ export default function AdminDashboard() {
             <div className="text-gray-400 text-xs mt-1">${(summary?.total.total_usd ?? 0).toFixed(2)} total revenue</div>
           </Card>
         </Col>
-        <Col xs={24} sm={12} lg={6}>
+        <Col xs={24} sm={12} lg={8}>
+          <Card>
+            <Statistic
+              title="Today's Unpaid Orders"
+              value={summary?.todayUnpaid.total_usd ?? 0}
+              prefix={<ExclamationCircleOutlined />}
+              precision={2}
+              styles={{ content: { color: "#f5222d" } }}
+              suffix="USD"
+            />
+            <div className="text-gray-400 text-xs mt-1">{summary?.todayUnpaid.cnt ?? 0} orders unpaid</div>
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={8}>
+          <Card>
+            <Statistic
+              title="Monthly Unpaid Orders"
+              value={summary?.monthUnpaid.total_usd ?? 0}
+              prefix={<ExclamationCircleOutlined />}
+              precision={2}
+              styles={{ content: { color: "#fa541c" } }}
+              suffix="USD"
+            />
+            <div className="text-gray-400 text-xs mt-1">{summary?.monthUnpaid.cnt ?? 0} orders unpaid</div>
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={8}>
           <Card>
             <Statistic
               title="Products"

@@ -105,15 +105,19 @@ export async function GET(request: NextRequest) {
   if (type === "summary") {
     const today = new Date().toISOString().split("T")[0];
     const monthStart = today.slice(0, 7) + "-01";
-    const [todayR, monthR, totalR] = await Promise.all([
+    const [todayR, monthR, totalR, todayUnpaidR, monthUnpaidR] = await Promise.all([
       db.execute(`SELECT COALESCE(SUM(total_usd),0) as total_usd, COUNT(*) as cnt FROM sales WHERE payment_status = 'paid' AND date(created_at)='${today}'`),
       db.execute(`SELECT COALESCE(SUM(total_usd),0) as total_usd, COUNT(*) as cnt FROM sales WHERE payment_status = 'paid' AND date(created_at)>='${monthStart}'`),
       db.execute(`SELECT COALESCE(SUM(total_usd),0) as total_usd, COUNT(*) as cnt FROM sales WHERE payment_status = 'paid'`),
+      db.execute(`SELECT COALESCE(SUM(total_usd),0) as total_usd, COUNT(*) as cnt FROM sales WHERE payment_status = 'unpaid' AND date(created_at)='${today}'`),
+      db.execute(`SELECT COALESCE(SUM(total_usd),0) as total_usd, COUNT(*) as cnt FROM sales WHERE payment_status = 'unpaid' AND date(created_at)>='${monthStart}'`),
     ]);
     return Response.json({
       today: todayR.rows[0],
       month: monthR.rows[0],
       total: totalR.rows[0],
+      todayUnpaid: todayUnpaidR.rows[0],
+      monthUnpaid: monthUnpaidR.rows[0],
     });
   }
 
