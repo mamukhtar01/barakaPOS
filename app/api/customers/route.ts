@@ -13,30 +13,20 @@ function normalizeCustomerPhone(value: unknown) {
   return normalized.length > 0 ? normalized : null;
 }
 
-async function findExistingCustomer(name: string, phone: string | null) {
-  if (phone) {
-    const { rows } = await db.execute({
-      sql: "SELECT * FROM customers WHERE phone = ? ORDER BY id ASC LIMIT 1",
-      args: [phone],
-    });
+async function findCustomerByPhone(phone: string) {
+  const { rows } = await db.execute({
+    sql: "SELECT * FROM customers WHERE phone = ? ORDER BY id ASC LIMIT 1",
+    args: [phone],
+  });
+  return rows.length > 0 ? rows[0] : null;
+}
 
-    if (rows.length > 0) {
-      return rows[0];
-    }
-  }
-
-  if (!phone) {
-    const { rows } = await db.execute({
-      sql: "SELECT * FROM customers WHERE LOWER(TRIM(name)) = LOWER(?) ORDER BY id ASC LIMIT 1",
-      args: [name],
-    });
-
-    if (rows.length > 0) {
-      return rows[0];
-    }
-  }
-
-  return null;
+async function findCustomerByName(name: string) {
+  const { rows } = await db.execute({
+    sql: "SELECT * FROM customers WHERE LOWER(TRIM(name)) = LOWER(?) ORDER BY id ASC LIMIT 1",
+    args: [name],
+  });
+  return rows.length > 0 ? rows[0] : null;
 }
 
 export async function GET(request: NextRequest) {
@@ -63,9 +53,19 @@ export async function POST(request: NextRequest) {
 
   if (!normalizedName) return Response.json({ error: "Name required" }, { status: 400 });
 
-  const existingCustomer = await findExistingCustomer(normalizedName, normalizedPhone);
-  if (existingCustomer) {
-    return Response.json({ customer: existingCustomer });
+  if (normalizedPhone) {
+    const existingByPhone = await findCustomerByPhone(normalizedPhone);
+    if (existingByPhone) {
+      return Response.json(
+        { error: "A customer with this phone number already exists", customer: existingByPhone },
+        { status: 409 },
+      );
+    }
+  } else {
+    const existingByName = await findCustomerByName(normalizedName);
+    if (existingByName) {
+      return Response.json({ customer: existingByName });
+    }
   }
 
   const { rows } = await db.execute({
