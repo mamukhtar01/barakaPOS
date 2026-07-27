@@ -127,7 +127,7 @@ export default function CustomersPage() {
             <Input placeholder="Customer name" />
           </Form.Item>
           <Form.Item name="phone" label="Phone Number" rules={[{ required: true }]}>
-            <Input placeholder="+252..." />
+            <Input placeholder="+252..." type="number" />
           </Form.Item>
           <div className="flex gap-2">
             <Button block onClick={() => setModalOpen(false)}>Cancel</Button>

@@ -1634,7 +1634,7 @@ export default function POSPage() {
             label="Phone"
             rules={[{ required: true, message: "Enter phone" }]}
           >
-            <Input placeholder="Phone number" />
+            <Input placeholder="Phone number" type="number" />
           </Form.Item>
           <div className="flex gap-2">
             <Button block onClick={() => setCustomerQuickOpen(false)}>
