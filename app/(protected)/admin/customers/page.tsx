@@ -126,7 +126,7 @@ export default function CustomersPage() {
           <Form.Item name="name" label="Name" rules={[{ required: true }]}>
             <Input placeholder="Customer name" />
           </Form.Item>
-          <Form.Item name="phone" label="Phone Number">
+          <Form.Item name="phone" label="Phone Number" rules={[{ required: true }]}>
             <Input placeholder="+252..." />
           </Form.Item>
           <div className="flex gap-2">

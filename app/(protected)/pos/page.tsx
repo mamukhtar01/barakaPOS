@@ -1625,7 +1625,7 @@ export default function POSPage() {
           >
             <Input placeholder="Customer name" />
           </Form.Item>
-          <Form.Item name="phone" label="Phone">
+          <Form.Item name="phone" label="Phone" rules={[{ required: true, message:"Enter phone" }]}>
             <Input placeholder="Phone number" />
           </Form.Item>
           <div className="flex gap-2">
