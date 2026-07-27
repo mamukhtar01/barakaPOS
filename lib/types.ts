@@ -1,7 +1,7 @@
 export type Role = "admin" | "cashier";
 // SSHL = Somaliland Shilling (legacy records may still contain "SOS")
 export type Currency = "USD" | "SSHL";
-export type PaymentMethod = "cash" | "mobile" | "card";
+export type PaymentMethod = "cash" | "zaad" | "edahab";
 export type ProductStatus = "active" | "inactive";
 export type SalePaymentStatus = "paid" | "unpaid";
 

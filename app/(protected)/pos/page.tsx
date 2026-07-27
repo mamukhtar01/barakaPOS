@@ -139,15 +139,14 @@ export default function POSPage() {
   const [creditDrawerOpen, setCreditDrawerOpen] = useState(false);
   const [creditGroups, setCreditGroups] = useState<CustomerCreditGroup[]>([]);
   const [loadingCredit, setLoadingCredit] = useState(false);
-  const [expandedCreditKey, setExpandedCreditKey] = useState<
-    CreditKey | null
-  >(null);
+  const [expandedCreditKey, setExpandedCreditKey] = useState<CreditKey | null>(
+    null,
+  );
   const [creditOrdersByCustomer, setCreditOrdersByCustomer] = useState<
     Record<string, Sale[]>
   >({});
-  const [loadingCreditOrdersKey, setLoadingCreditOrdersKey] = useState<
-    CreditKey | null
-  >(null);
+  const [loadingCreditOrdersKey, setLoadingCreditOrdersKey] =
+    useState<CreditKey | null>(null);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [checkoutTabKey, setCheckoutTabKey] = useState<"checkout" | "details">(
     "checkout",
@@ -377,7 +376,7 @@ export default function POSPage() {
 
   const formatUsd = (usd: number) => `$${usd.toFixed(2)}`;
   const formatSshl = (usd: number, rate = exchangeRate) =>
-    `${(usd * rate).toLocaleString()} SSHL`;
+    `SSHL: ${(usd * rate).toLocaleString()} `;
   const displayPrice = (usd: number) =>
     selectedCurrency === "USD" ? formatUsd(usd) : formatSshl(usd);
 
@@ -1217,7 +1216,9 @@ export default function POSPage() {
                     overscrollBehavior: "contain",
                   }}
                 >
-                  {pendingRecentOrders.map((order) => renderOrderItem(order, true))}
+                  {pendingRecentOrders.map((order) =>
+                    renderOrderItem(order, true),
+                  )}
                 </div>
               ),
             },
@@ -1290,7 +1291,9 @@ export default function POSPage() {
                     <div className="min-w-0">
                       <Text strong className="block truncate">
                         {group.customer_name}
-                        {group.customer_phone ? ` • ${group.customer_phone}` : ""}
+                        {group.customer_phone
+                          ? ` • ${group.customer_phone}`
+                          : ""}
                       </Text>
                       <Text type="secondary" className="block text-xs">
                         {group.order_count} unpaid order
@@ -1399,7 +1402,7 @@ export default function POSPage() {
                         Subtotal: <strong>{formatUsd(cartTotalUsd)}</strong>
                       </Text>
                       <Text className="block">
-                        Subtotal (SSHL):{" "}
+                        Subtotal{" "}
                         <strong>{formatSshl(cartTotalUsd)}</strong>
                       </Text>
                     </div>
@@ -1441,8 +1444,8 @@ export default function POSPage() {
                       <Segmented
                         options={[
                           { label: "Cash", value: "cash" },
-                          { label: "Mobile", value: "mobile" },
-                          { label: "Card", value: "card" },
+                          { label: "Zaad", value: "zaad" },
+                          { label: "Edahab", value: "edahab" },
                         ]}
                         block
                       />
@@ -1485,10 +1488,11 @@ export default function POSPage() {
                                   ? formatUsd(finalUsd)
                                   : formatSshl(finalUsd)}
                               </strong>
-                            </Text>
-                            <Text type="secondary" className="text-xs">
-                              Equivalent: {formatUsd(finalUsd)} /{" "}
+                            <Divider vertical></Divider>
+                              <strong>
+
                               {formatSshl(finalUsd)}
+                              </strong>
                             </Text>
                           </Card>
                         );
@@ -1625,7 +1629,11 @@ export default function POSPage() {
           >
             <Input placeholder="Customer name" />
           </Form.Item>
-          <Form.Item name="phone" label="Phone" rules={[{ required: true, message:"Enter phone" }]}>
+          <Form.Item
+            name="phone"
+            label="Phone"
+            rules={[{ required: true, message: "Enter phone" }]}
+          >
             <Input placeholder="Phone number" />
           </Form.Item>
           <div className="flex gap-2">
@@ -1831,8 +1839,7 @@ function Receipt({ sale, shopName }: { sale: Sale; shopName: string }) {
           height={64}
           className="mx-auto mb-2 h-16 w-auto object-contain"
         />
-        <Text strong   className="block text-lg! uppercase text-red-500! mb-2"
->
+        <Text strong className="block text-lg! uppercase text-red-500! mb-2">
           {shopName}
         </Text>
         <Text type="secondary" className="text-xs">
@@ -1898,9 +1905,14 @@ function Receipt({ sale, shopName }: { sale: Sale; shopName: string }) {
           <Text>519707</Text>
         </div>
         <div className="flex items-center gap-1.5">
-          <Text code style={{
-            color: "red"
-          }}>EDAHAB:</Text>
+          <Text
+            code
+            style={{
+              color: "red",
+            }}
+          >
+            EDAHAB:
+          </Text>
           <Text>760083</Text>
         </div>
       </div>
