@@ -30,6 +30,7 @@ import {
   CheckCircleOutlined,
   CloseCircleOutlined,
   ClockCircleOutlined,
+  CreditCardOutlined,
   DeleteOutlined,
   DownOutlined,
   DollarOutlined,
@@ -51,6 +52,7 @@ import type {
   Category,
   Currency,
   Customer,
+  CustomerCreditGroup,
   Product,
   Sale,
   SalePaymentStatus,
@@ -62,6 +64,10 @@ const CURRENCY_OPTIONS: { label: string; value: Currency }[] = [
   { label: "USD ($)", value: "USD" },
   { label: "SSHL", value: "SSHL" },
 ];
+
+type CreditKey = number | "none";
+const creditKeyOf = (customerId: number | null): CreditKey =>
+  customerId ?? "none";
 
 function getProductImage(product: Product) {
   return product.img ?? product.thumbnail_url ?? product.image_url;
@@ -130,6 +136,18 @@ export default function POSPage() {
   const [ordersTabKey, setOrdersTabKey] = useState<"pending" | "completed">(
     "pending",
   );
+  const [creditDrawerOpen, setCreditDrawerOpen] = useState(false);
+  const [creditGroups, setCreditGroups] = useState<CustomerCreditGroup[]>([]);
+  const [loadingCredit, setLoadingCredit] = useState(false);
+  const [expandedCreditKey, setExpandedCreditKey] = useState<
+    CreditKey | null
+  >(null);
+  const [creditOrdersByCustomer, setCreditOrdersByCustomer] = useState<
+    Record<string, Sale[]>
+  >({});
+  const [loadingCreditOrdersKey, setLoadingCreditOrdersKey] = useState<
+    CreditKey | null
+  >(null);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [checkoutTabKey, setCheckoutTabKey] = useState<"checkout" | "details">(
     "checkout",
@@ -195,6 +213,43 @@ export default function POSPage() {
     setLoadingOrders(false);
   }, []);
 
+  const fetchCreditGroups = useCallback(async () => {
+    setLoadingCredit(true);
+    const res = await fetch("/api/sales/credit");
+    if (res.ok) {
+      const data = await res.json();
+      setCreditGroups(data.groups ?? []);
+    }
+    setLoadingCredit(false);
+  }, []);
+
+  const fetchCustomerCreditOrders = useCallback(async (key: CreditKey) => {
+    setLoadingCreditOrdersKey(key);
+    const res = await fetch(
+      `/api/sales?status=unpaid&customer_id=${key}&limit=100`,
+    );
+    if (res.ok) {
+      const data = await res.json();
+      setCreditOrdersByCustomer((prev) => ({
+        ...prev,
+        [key]: (data.sales ?? []).map(normalizeSale),
+      }));
+    }
+    setLoadingCreditOrdersKey(null);
+  }, []);
+
+  const toggleCreditCustomer = useCallback(
+    (key: CreditKey) => {
+      if (expandedCreditKey === key) {
+        setExpandedCreditKey(null);
+        return;
+      }
+      setExpandedCreditKey(key);
+      void fetchCustomerCreditOrders(key);
+    },
+    [expandedCreditKey, fetchCustomerCreditOrders],
+  );
+
   const fetchOrderDetails = useCallback(
     async (id: number): Promise<Sale | null> => {
       setLoadingOrderDetailsId(id);
@@ -240,6 +295,7 @@ export default function POSPage() {
         fetchSettings(),
         fetchRecentOrders(),
         fetchOrderEditProducts(),
+        fetchCreditGroups(),
       ]);
     })();
   }, [
@@ -248,6 +304,7 @@ export default function POSPage() {
     fetchSettings,
     fetchRecentOrders,
     fetchOrderEditProducts,
+    fetchCreditGroups,
   ]);
 
   useEffect(() => {
@@ -343,6 +400,10 @@ export default function POSPage() {
   };
 
   const submitOrder = async (status: SalePaymentStatus) => {
+    if (status === "unpaid" && !checkoutForm.getFieldValue("customer_id")) {
+      message.warning("Select a customer to park an order as unpaid");
+      return;
+    }
     setOrderAction(status);
     await checkoutForm.validateFields();
     checkoutForm.submit();
@@ -393,6 +454,7 @@ export default function POSPage() {
       setCart([]);
       setReceiptOpen(true);
       await fetchRecentOrders();
+      if (orderAction === "unpaid") await fetchCreditGroups();
       message.success(
         orderAction === "paid" ? "Order completed" : "Order parked as unpaid",
       );
@@ -443,6 +505,10 @@ export default function POSPage() {
     message.success("Order marked as paid");
     await fetchRecentOrders();
     await fetchOrderDetails(id);
+    await fetchCreditGroups();
+    if (expandedCreditKey !== null) {
+      await fetchCustomerCreditOrders(expandedCreditKey);
+    }
   };
 
   const markOrderDone = async (id: number) => {
@@ -510,6 +576,10 @@ export default function POSPage() {
       return next;
     });
     setExpandedOrderId(null);
+    await fetchCreditGroups();
+    if (expandedCreditKey !== null) {
+      await fetchCustomerCreditOrders(expandedCreditKey);
+    }
   };
 
   const startEditingOrder = useCallback(
@@ -858,6 +928,13 @@ export default function POSPage() {
             icon={<ClockCircleOutlined />}
             onClick={() => setOrdersDrawerOpen(true)}
           />
+          <Badge count={creditGroups.length} size="small" offset={[-4, 4]}>
+            <Button
+              size="small"
+              icon={<CreditCardOutlined />}
+              onClick={() => setCreditDrawerOpen(true)}
+            />
+          </Badge>
           <Segmented
             options={CURRENCY_OPTIONS}
             value={selectedCurrency}
@@ -1170,6 +1247,93 @@ export default function POSPage() {
             },
           ]}
         />
+      </Drawer>
+
+      <Drawer
+        title="Unpaid / Credit customers"
+        placement="bottom"
+        size="85%"
+        open={creditDrawerOpen}
+        onClose={() => {
+          setCreditDrawerOpen(false);
+          setExpandedCreditKey(null);
+          closeOrderDetails();
+        }}
+        styles={{
+          body: { display: "flex", flexDirection: "column", minHeight: 0 },
+        }}
+      >
+        {loadingCredit ? (
+          <div className="text-center py-10">
+            <Spin />
+          </div>
+        ) : creditGroups.length === 0 ? (
+          <Empty description="No outstanding customer balances" />
+        ) : (
+          <div
+            className="mx-auto w-full max-w-3xl space-y-3 overflow-y-auto pb-4 max-h-[70dvh]"
+            style={{
+              scrollBehavior: "smooth",
+              WebkitOverflowScrolling: "touch",
+              overscrollBehavior: "contain",
+            }}
+          >
+            {creditGroups.map((group) => {
+              const key = creditKeyOf(group.customer_id);
+              const isExpanded = expandedCreditKey === key;
+              const isLoadingOrders = loadingCreditOrdersKey === key;
+              const orders = creditOrdersByCustomer[key] ?? [];
+
+              return (
+                <Card key={key} size="small">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <Text strong className="block truncate">
+                        {group.customer_name}
+                        {group.customer_phone ? ` • ${group.customer_phone}` : ""}
+                      </Text>
+                      <Text type="secondary" className="block text-xs">
+                        {group.order_count} unpaid order
+                        {group.order_count === 1 ? "" : "s"} • outstanding since{" "}
+                        {new Date(group.oldest_created_at).toLocaleDateString()}
+                      </Text>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <Text strong className="block text-sm">
+                        {formatUsd(group.total_usd)}
+                      </Text>
+                      <Text type="secondary" className="block text-xs">
+                        {group.total_sos.toLocaleString()} SSHL
+                      </Text>
+                    </div>
+                  </div>
+                  <Button
+                    size="small"
+                    className="mt-2"
+                    onClick={() => toggleCreditCustomer(key)}
+                  >
+                    {isExpanded ? "Hide orders" : "View orders"}
+                  </Button>
+
+                  {isExpanded ? (
+                    <div className="mt-3 space-y-2 border-t border-black/10 pt-3">
+                      {isLoadingOrders ? (
+                        <Spin size="small" />
+                      ) : orders.length === 0 ? (
+                        <Empty
+                          description="No unpaid orders"
+                          image={Empty.PRESENTED_IMAGE_SIMPLE}
+                        />
+                      ) : (
+                        orders.map((order) => renderOrderItem(order, true))
+                      )}
+                    </div>
+                  ) : null}
+                </Card>
+              );
+            })}
+          </div>
+        )}
       </Drawer>
 
       <Drawer

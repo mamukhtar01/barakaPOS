@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
               SUM(total_usd) as total_usd,
               SUM(total_sos) as total_sos,
               COUNT(*) as transaction_count
-       FROM sales WHERE 1=1${dateFilter()}
+       FROM sales WHERE payment_status = 'paid'${dateFilter()}
        GROUP BY date(created_at) ORDER BY date DESC LIMIT 30`
     );
     return Response.json({ report: rows });
@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
               SUM(total_usd) as total_usd,
               SUM(total_sos) as total_sos,
               COUNT(*) as transaction_count
-       FROM sales WHERE 1=1${dateFilter()}
+       FROM sales WHERE payment_status = 'paid'${dateFilter()}
        GROUP BY strftime('%Y-%m', created_at) ORDER BY month DESC LIMIT 12`
     );
     return Response.json({ report: rows });
@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
        FROM sale_items si
        LEFT JOIN products p ON si.product_id = p.id
        LEFT JOIN sales s ON si.sale_id = s.id
-       WHERE 1=1${dateFilter()}
+       WHERE s.payment_status = 'paid'${dateFilter()}
        GROUP BY si.product_name ORDER BY revenue_usd DESC`
     );
     return Response.json({ report: rows });
@@ -66,7 +66,7 @@ export async function GET(request: NextRequest) {
               SUM(total_usd) as total_usd,
               SUM(total_sos) as total_sos,
               COUNT(*) as transaction_count
-       FROM sales WHERE 1=1${dateFilter()}
+       FROM sales WHERE payment_status = 'paid'${dateFilter()}
        GROUP BY payment_method`
     );
     return Response.json({ report: rows });
@@ -78,8 +78,26 @@ export async function GET(request: NextRequest) {
               SUM(total_usd) as total_usd,
               SUM(total_sos) as total_sos,
               COUNT(*) as transaction_count
-       FROM sales WHERE 1=1${dateFilter()}
+       FROM sales WHERE payment_status = 'paid'${dateFilter()}
        GROUP BY currency`
+    );
+    return Response.json({ report: rows });
+  }
+
+  if (type === "unpaid") {
+    const { rows } = await db.execute(
+      `SELECT c.id as customer_id,
+              COALESCE(c.name, 'Walk-in / No customer') as customer_name,
+              c.phone as customer_phone,
+              COUNT(s.id) as order_count,
+              SUM(s.total_usd) as total_usd,
+              SUM(s.total_sos) as total_sos,
+              MIN(s.created_at) as oldest_created_at
+       FROM sales s
+       LEFT JOIN customers c ON s.customer_id = c.id
+       WHERE s.payment_status = 'unpaid'${dateFilter()}
+       GROUP BY c.id
+       ORDER BY oldest_created_at ASC`
     );
     return Response.json({ report: rows });
   }
@@ -88,9 +106,9 @@ export async function GET(request: NextRequest) {
     const today = new Date().toISOString().split("T")[0];
     const monthStart = today.slice(0, 7) + "-01";
     const [todayR, monthR, totalR] = await Promise.all([
-      db.execute(`SELECT COALESCE(SUM(total_usd),0) as total_usd, COUNT(*) as cnt FROM sales WHERE date(created_at)='${today}'`),
-      db.execute(`SELECT COALESCE(SUM(total_usd),0) as total_usd, COUNT(*) as cnt FROM sales WHERE date(created_at)>='${monthStart}'`),
-      db.execute(`SELECT COALESCE(SUM(total_usd),0) as total_usd, COUNT(*) as cnt FROM sales`),
+      db.execute(`SELECT COALESCE(SUM(total_usd),0) as total_usd, COUNT(*) as cnt FROM sales WHERE payment_status = 'paid' AND date(created_at)='${today}'`),
+      db.execute(`SELECT COALESCE(SUM(total_usd),0) as total_usd, COUNT(*) as cnt FROM sales WHERE payment_status = 'paid' AND date(created_at)>='${monthStart}'`),
+      db.execute(`SELECT COALESCE(SUM(total_usd),0) as total_usd, COUNT(*) as cnt FROM sales WHERE payment_status = 'paid'`),
     ]);
     return Response.json({
       today: todayR.rows[0],

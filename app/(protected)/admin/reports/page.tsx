@@ -6,7 +6,7 @@ import {
   Row, Col, Space, Spin
 } from "antd";
 import { BarChartOutlined } from "@ant-design/icons";
-import type { DailySalesReport, PaymentMethodReport } from "@/lib/types";
+import type { CustomerCreditGroup, DailySalesReport, PaymentMethodReport } from "@/lib/types";
 
 interface CurrencyReport {
   currency: string;
@@ -26,6 +26,7 @@ export default function ReportsPage() {
   const [productData, setProductData] = useState<{ product_name: string; quantity_sold: number; revenue_usd: number; cost_usd: number; profit_usd: number }[]>([]);
   const [paymentData, setPaymentData] = useState<PaymentMethodReport[]>([]);
   const [currencyData, setCurrencyData] = useState<CurrencyReport[]>([]);
+  const [unpaidData, setUnpaidData] = useState<CustomerCreditGroup[]>([]);
   const [activeTab, setActiveTab] = useState("daily");
 
   const fetchReport = useCallback(async (type: string) => {
@@ -44,6 +45,7 @@ export default function ReportsPage() {
         case "by_product": setProductData(data.report); break;
         case "by_payment_method": setPaymentData(data.report); break;
         case "by_currency": setCurrencyData(data.report); break;
+        case "unpaid": setUnpaidData(data.report); break;
       }
     }
     setLoading(false);
@@ -75,6 +77,15 @@ export default function ReportsPage() {
         <span className={v >= 0 ? "text-green-600" : "text-red-500"}>${Number(v).toFixed(2)}</span>
       ),
     },
+  ];
+
+  const unpaidColumns = [
+    { title: "Customer", dataIndex: "customer_name" },
+    { title: "Phone", dataIndex: "customer_phone", render: (v: string | null) => v ?? "-" },
+    { title: "Unpaid orders", dataIndex: "order_count" },
+    { title: "Owed (USD)", dataIndex: "total_usd", render: (v: number) => `$${Number(v).toFixed(2)}` },
+    { title: "Owed (SSHL)", dataIndex: "total_sos", render: (v: number) => `${Number(v).toLocaleString()} SSHL` },
+    { title: "Outstanding since", dataIndex: "oldest_created_at", render: (v: string) => new Date(v).toLocaleDateString() },
   ];
 
   return (
@@ -190,6 +201,32 @@ export default function ReportsPage() {
                     ))}
                     {currencyData.length === 0 && <Col span={24}><p className="text-gray-400 text-center py-8">No data. Click Generate.</p></Col>}
                   </Row>
+                ),
+              },
+              {
+                key: "unpaid",
+                label: "Unpaid / Credit",
+                children: (
+                  <Table
+                    dataSource={unpaidData}
+                    columns={unpaidColumns}
+                    rowKey={(r) => r.customer_id ?? "none"}
+                    pagination={{ pageSize: 15 }}
+                    summary={(data) => {
+                      const totalUsd = data.reduce((s, r) => s + Number(r.total_usd), 0);
+                      const totalOrders = data.reduce((s, r) => s + Number(r.order_count), 0);
+                      return (
+                        <Table.Summary.Row>
+                          <Table.Summary.Cell index={0}><strong>Total</strong></Table.Summary.Cell>
+                          <Table.Summary.Cell index={1} />
+                          <Table.Summary.Cell index={2}><strong>{totalOrders}</strong></Table.Summary.Cell>
+                          <Table.Summary.Cell index={3}><strong>${totalUsd.toFixed(2)}</strong></Table.Summary.Cell>
+                          <Table.Summary.Cell index={4} />
+                          <Table.Summary.Cell index={5} />
+                        </Table.Summary.Row>
+                      );
+                    }}
+                  />
                 ),
               },
             ]}

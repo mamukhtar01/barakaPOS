@@ -39,3 +39,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+data/db.db
+data/db.db-shm
+pnpm-workspace.yaml
+pnpm-workspace.yaml
+pnpm-workspace.yaml
+data/db.db-wal
+pnpm-workspace.yaml

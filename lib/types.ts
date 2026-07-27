@@ -107,3 +107,13 @@ export interface ProductSalesReport {
   cost_usd: number;
   profit_usd: number;
 }
+
+export interface CustomerCreditGroup {
+  customer_id: number | null;
+  customer_name: string;
+  customer_phone: string | null;
+  order_count: number;
+  total_usd: number;
+  total_sos: number;
+  oldest_created_at: string;
+}

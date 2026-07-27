@@ -9,12 +9,20 @@ export async function GET(request: NextRequest) {
   const limit = Number(searchParams.get("limit") ?? 20);
   const offset = Number(searchParams.get("offset") ?? 0);
   const status = searchParams.get("status");
+  const customerId = searchParams.get("customer_id");
+  const conditions: string[] = [];
   const args: (number | string)[] = [];
-  let whereClause = "";
   if (status === "paid" || status === "unpaid") {
-    whereClause = "WHERE s.payment_status = ?";
+    conditions.push("s.payment_status = ?");
     args.push(status);
   }
+  if (customerId === "none") {
+    conditions.push("s.customer_id IS NULL");
+  } else if (customerId) {
+    conditions.push("s.customer_id = ?");
+    args.push(Number(customerId));
+  }
+  const whereClause = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
   const { rows } = await db.execute({
     sql: `SELECT s.*, c.name as customer_name, u.username as cashier_name
           FROM sales s
@@ -79,6 +87,13 @@ export async function POST(request: NextRequest) {
 
   const normalizedCurrency = currency === "SOS" ? "SSHL" : (currency ?? "USD");
   const normalizedStatus = payment_status === "unpaid" ? "unpaid" : "paid";
+
+  if (normalizedStatus === "unpaid" && !customer_id) {
+    return Response.json(
+      { error: "Customer is required to park an order as unpaid" },
+      { status: 400 }
+    );
+  }
 
   const saleResult = await db.execute({
     sql: `INSERT INTO sales (customer_id, cashier_id, currency, exchange_rate, payment_method, payment_status, total_usd, total_sos, discount, notes)
