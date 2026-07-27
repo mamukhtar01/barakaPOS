@@ -172,7 +172,7 @@ export default function ReportsPage() {
                       <Col xs={24} sm={8} key={r.payment_method}>
                         <Card>
                           <Tag color={PAYMENT_COLORS[r.payment_method] ?? "default"} className="mb-2">
-                            {r.payment_method === "cash" ? "💵 Cash" : r.payment_method === "mobile" ? "📱 Mobile" : "💳 Card"}
+                            {r.payment_method === "cash" ? "💵 Cash" : r.payment_method === "zaad" ? "📱 Zaad" : "💳 Edahab"}
                           </Tag>
                           <Statistic title="Revenue (USD)" value={Number(r.total_usd)} prefix="$" precision={2} />
                           <div className="text-gray-400 text-xs mt-1">{r.transaction_count} transactions</div>
