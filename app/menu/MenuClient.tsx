@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Image from "next/image";
 import { Card, Col, Empty, Image as AntImage, Input, Row, Typography } from "antd";
 import { SearchOutlined } from "@ant-design/icons";
 import type { Category, Product } from "@/lib/types";
@@ -53,12 +54,16 @@ export function MenuClient({
       <div className="sticky top-0 z-10 bg-white/90 backdrop-blur border-b border-gray-100">
         <div className="max-w-3xl mx-auto px-4 pt-5 pb-3">
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-11 h-11 shrink-0 rounded-full bg-green-600 flex items-center justify-center text-white text-lg font-bold shadow-sm">
-              B
-            </div>
+            <Image
+              src="/logo.png"
+              alt="Abukhayr Café logo"
+              width={44}
+              height={44}
+              className="w-11 h-11 shrink-0 rounded-full object-cover shadow-sm"
+            />
             <div>
-              <Title level={4} className="mb-0!">
-                Baraka Café
+              <Title level={4} className="mb-0! font-bold! text-green-500!">
+                Abukhayr Café
               </Title>
               <Text type="secondary" className="text-xs">
                 Our Menu

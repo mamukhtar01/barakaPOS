@@ -4,7 +4,7 @@ import { MenuClient } from "./MenuClient";
 import type { Category, Product } from "@/lib/types";
 
 export const metadata: Metadata = {
-  title: "Menu | Baraka Café",
+  title: "Menu | Abukhayr Café",
   description: "Browse our menu",
 };
 
@@ -20,8 +20,8 @@ export default async function MenuPage() {
 
   return (
     <MenuClient
-      products={products as unknown as Product[]}
-      categories={categories as unknown as Category[]}
+      products={products.map((row) => ({ ...row }) as unknown as Product)}
+      categories={categories.map((row) => ({ ...row }) as unknown as Category)}
     />
   );
 }
