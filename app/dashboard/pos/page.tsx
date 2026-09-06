@@ -204,7 +204,7 @@ export default function POSPage() {
 
   const fetchRecentOrders = useCallback(async () => {
     setLoadingOrders(true);
-    const res = await fetch("/api/sales?limit=25");
+    const res = await fetch("/api/sales?limit=200");
     if (res.ok) {
       const data = await res.json();
       setRecentOrders((data.sales ?? []).map(normalizeSale));
@@ -225,7 +225,7 @@ export default function POSPage() {
   const fetchCustomerCreditOrders = useCallback(async (key: CreditKey) => {
     setLoadingCreditOrdersKey(key);
     const res = await fetch(
-      `/api/sales?status=unpaid&customer_id=${key}&limit=100`,
+      `/api/sales?status=unpaid&customer_id=${key}&limit=500`,
     );
     if (res.ok) {
       const data = await res.json();
