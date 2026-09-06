@@ -24,8 +24,7 @@ const CONTACT = {
   address: "Masalaha, Ciir Mall, Hargeisa, Somaliland",
   phone: "+252 63 314 5555",
   whatsapp: "252633145555",
-  // Hours aren't confirmed yet — update once known.
-  hours: "Every day · 7:00 AM – 10:00 PM",
+  hours: "Every day · 7:00 AM – 12:00 PM",
   social: "abukhayrsnackbar",
 };
 
@@ -48,48 +47,48 @@ export function LandingClient({ products }: { products: Product[] }) {
 
       {/* Hero */}
       <section className="bg-gradient-to-b from-green-50 via-white to-white">
-        <div className="max-w-5xl mx-auto px-4 pt-16 pb-20 text-center">
+        <div className="max-w-5xl mx-auto px-4 pt-10 pb-14 sm:pt-16 sm:pb-20 text-center">
           <Image
             src="/logo.png"
             alt="Abukhayr Café logo"
             width={72}
             height={72}
-            className="mx-auto rounded-full object-cover shadow-lg mb-6"
+            className="mx-auto rounded-full object-cover shadow-lg mb-5 sm:mb-6 w-16 h-16 sm:w-[72px] sm:h-[72px]"
           />
           <span className="inline-block bg-green-100 text-green-700 text-xs font-semibold px-3 py-1 rounded-full mb-4">
             Now Open
           </span>
-          <Title level={1} className="mb-3! text-4xl! sm:text-5xl! font-bold! text-gray-900!">
+          <Title level={1} className="mb-3! text-3xl! sm:text-5xl! font-bold! text-gray-900!">
             Abukhayr Café
           </Title>
-          <Paragraph className="text-lg! text-gray-600! max-w-xl mx-auto mb-8!">
+          <Paragraph className="text-base! sm:text-lg! text-gray-600! max-w-xl mx-auto mb-8! px-2">
             Great coffee, fresh bites, and warm hospitality — right in the heart of the city.
           </Paragraph>
-          <div className="flex flex-wrap items-center justify-center gap-3">
-            <Link href="/menu">
-              <Button type="primary" size="large">View Our Menu</Button>
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3 max-w-xs sm:max-w-none mx-auto">
+            <Link href="/menu" className="block">
+              <Button type="primary" size="large" block className="sm:w-auto!">View Our Menu</Button>
             </Link>
-            <a href="#contact">
-              <Button size="large">Find Us</Button>
+            <a href="#contact" className="block">
+              <Button size="large" block className="sm:w-auto!">Find Us</Button>
             </a>
           </div>
         </div>
       </section>
 
       {/* Highlights */}
-      <section id="about" className="max-w-5xl mx-auto px-4 py-16">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-          <div className="text-center p-6 rounded-2xl bg-gray-50">
+      <section id="about" className="max-w-5xl mx-auto px-4 py-10 sm:py-16">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
+          <div className="text-center p-5 sm:p-6 rounded-2xl bg-gray-50">
             <CoffeeOutlined className="text-3xl text-green-600 mb-3" />
             <Title level={5} className="mb-1!">Fresh Daily</Title>
             <Text type="secondary">Coffee brewed and snacks prepared fresh every day.</Text>
           </div>
-          <div className="text-center p-6 rounded-2xl bg-gray-50">
+          <div className="text-center p-5 sm:p-6 rounded-2xl bg-gray-50">
             <DollarCircleOutlined className="text-3xl text-green-600 mb-3" />
             <Title level={5} className="mb-1!">Pay Your Way</Title>
             <Text type="secondary">We accept cash, ZAAD, and eDahab — in USD or SSHL.</Text>
           </div>
-          <div className="text-center p-6 rounded-2xl bg-gray-50">
+          <div className="text-center p-5 sm:p-6 rounded-2xl bg-gray-50">
             <SmileOutlined className="text-3xl text-green-600 mb-3" />
             <Title level={5} className="mb-1!">Warm Hospitality</Title>
             <Text type="secondary">A cozy spot to relax, meet friends, or get some work done.</Text>
@@ -99,15 +98,15 @@ export function LandingClient({ products }: { products: Product[] }) {
 
       {/* Featured products */}
       {products.length > 0 && (
-        <section className="bg-green-50/60 py-16">
+        <section className="bg-green-50/60 py-10 sm:py-16">
           <div className="max-w-5xl mx-auto px-4">
-            <div className="flex items-end justify-between mb-6">
-              <Title level={3} className="mb-0!">From Our Menu</Title>
-              <Link href="/menu" className="text-green-700 font-medium hover:underline whitespace-nowrap">
+            <div className="flex items-end justify-between mb-5 sm:mb-6 gap-2">
+              <Title level={3} className="mb-0! text-xl! sm:text-2xl!">From Our Menu</Title>
+              <Link href="/menu" className="text-green-700 font-medium hover:underline whitespace-nowrap text-sm sm:text-base">
                 View full menu →
               </Link>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
               {products.map((product) => {
                 const image = getProductImage(product);
                 return (
@@ -139,9 +138,9 @@ export function LandingClient({ products }: { products: Product[] }) {
       )}
 
       {/* Contact */}
-      <section id="contact" className="max-w-5xl mx-auto px-4 py-16">
-        <Title level={3} className="mb-8! text-center">Visit Us</Title>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 max-w-2xl mx-auto">
+      <section id="contact" className="max-w-5xl mx-auto px-4 py-10 sm:py-16">
+        <Title level={3} className="mb-6! sm:mb-8! text-center text-xl! sm:text-2xl!">Visit Us</Title>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-8 max-w-2xl mx-auto">
           <div className="flex items-start gap-3">
             <EnvironmentOutlined className="text-xl text-green-600 mt-1" />
             <div>
@@ -180,7 +179,7 @@ export function LandingClient({ products }: { products: Product[] }) {
             </div>
           </div>
         </div>
-        <div className="flex items-center justify-center gap-6 mt-10">
+        <div className="flex items-center justify-center gap-6 mt-8 sm:mt-10">
           {SOCIAL_LINKS.map(({ icon: Icon, href, label }) => (
             <a
               key={label}
@@ -200,8 +199,8 @@ export function LandingClient({ products }: { products: Product[] }) {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-gray-100 py-8">
-        <div className="max-w-5xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-gray-500">
+      <footer className="border-t border-gray-100 py-6 sm:py-8">
+        <div className="max-w-5xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-center sm:justify-between gap-3 sm:gap-4 text-sm text-gray-500 text-center">
           <div className="flex items-center gap-2">
             <Image
               src="/logo.png"
@@ -215,7 +214,6 @@ export function LandingClient({ products }: { products: Product[] }) {
           <div className="flex items-center gap-4">
             <Link href="/menu" className="hover:text-green-700">Menu</Link>
             <a href="#contact" className="hover:text-green-700">Contact</a>
-            <Link href="/login" className="hover:text-green-700">Staff Login</Link>
           </div>
         </div>
       </footer>
