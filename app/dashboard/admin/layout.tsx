@@ -14,13 +14,13 @@ const { Sider, Content, Header } = Layout;
 const { Text } = Typography;
 
 const menuItems = [
-  { key: "/admin", icon: <DashboardOutlined />, label: "Dashboard" },
-  { key: "/admin/products", icon: <AppstoreOutlined />, label: "Products" },
-  { key: "/admin/categories", icon: <TagsOutlined />, label: "Categories" },
-  { key: "/admin/customers", icon: <UserOutlined />, label: "Customers" },
-  { key: "/admin/reports", icon: <BarChartOutlined />, label: "Reports" },
-  { key: "/admin/users", icon: <TeamOutlined />, label: "Users" },
-  { key: "/admin/settings", icon: <SettingOutlined />, label: "Settings" },
+  { key: "/dashboard/admin", icon: <DashboardOutlined />, label: "Dashboard" },
+  { key: "/dashboard/admin/products", icon: <AppstoreOutlined />, label: "Products" },
+  { key: "/dashboard/admin/categories", icon: <TagsOutlined />, label: "Categories" },
+  { key: "/dashboard/admin/customers", icon: <UserOutlined />, label: "Customers" },
+  { key: "/dashboard/admin/reports", icon: <BarChartOutlined />, label: "Reports" },
+  { key: "/dashboard/admin/users", icon: <TeamOutlined />, label: "Users" },
+  { key: "/dashboard/admin/settings", icon: <SettingOutlined />, label: "Settings" },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -33,13 +33,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   useEffect(() => {
     if (!loading && (!user || user.role !== "admin")) {
-      router.push("/pos");
+      router.push("/dashboard/pos");
     }
   }, [user, loading, router]);
 
   if (loading || !user || user.role !== "admin") return null;
 
-  const current = menuItems.find((m) => pathname === m.key || (m.key !== "/admin" && pathname.startsWith(m.key)));
+  const current = menuItems.find((m) => pathname === m.key || (m.key !== "/dashboard/admin" && pathname.startsWith(m.key)));
   const breadcrumb = current?.label ?? "Admin";
 
   const SideMenu = (
@@ -69,7 +69,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
           {SideMenu}
           <div className="p-3 border-t">
-            <Button block icon={<ShopOutlined />} onClick={() => router.push("/pos")}>POS</Button>
+            <Button block icon={<ShopOutlined />} onClick={() => router.push("/dashboard/pos")}>POS</Button>
             <Button block danger icon={<LogoutOutlined />} onClick={logout} className="mt-2">Logout</Button>
           </div>
         </Sider>
@@ -90,7 +90,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
           {SideMenu}
           <div className="p-3 border-t">
-            <Button block icon={<ShopOutlined />} onClick={() => { router.push("/pos"); setDrawerOpen(false); }}>POS</Button>
+            <Button block icon={<ShopOutlined />} onClick={() => { router.push("/dashboard/pos"); setDrawerOpen(false); }}>POS</Button>
             <Button block danger icon={<LogoutOutlined />} onClick={logout} className="mt-2">Logout</Button>
           </div>
         </Drawer>

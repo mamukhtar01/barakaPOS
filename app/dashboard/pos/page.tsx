@@ -945,7 +945,7 @@ export default function POSPage() {
               size="small"
               icon={<SettingOutlined />}
               ghost
-              onClick={() => router.push("/admin")}
+              onClick={() => router.push("/dashboard/admin")}
             />
           ) : null}
 

@@ -1,7 +1,7 @@
 {
-  "name": "Baraka POS",
-  "short_name": "BarakaPOS",
-  "description": "Point of Sale system for Baraka Cafe",
+  "name": "Abukhayr Café",
+  "short_name": "Abukhayr",
+  "description": "Abukhayr Café — great coffee, fresh bites, and warm hospitality.",
   "start_url": "/",
   "scope": "/",
   "icons": [

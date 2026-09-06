@@ -3,14 +3,14 @@ import "./globals.css";
 import { ClientProvider } from "@/components/ClientProvider";
 
 export const metadata: Metadata = {
-  title: "Baraka POS",
-  description: "Point of Sale system for Baraka Café",
+  title: "Abukhayr Café",
+  description: "Abukhayr Café — great coffee, fresh bites, and warm hospitality.",
   manifest: "/manifest.json",
-  applicationName: "Baraka POS",
+  applicationName: "Abukhayr Café",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Baraka POS",
+    title: "Abukhayr Café",
   },
   icons: {
     icon: [

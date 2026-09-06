@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
+import Image from "next/image";
 import { Button, Input, Form, Card, Typography, Alert, Space } from "antd";
 import { UserOutlined, LockOutlined } from "@ant-design/icons";
 import { useRouter } from "next/navigation";
@@ -57,7 +58,7 @@ export default function LoginPage() {
         pinRefs.current[0]?.focus();
       } else {
         await refresh();
-        router.replace("/pos");
+        router.replace("/dashboard/pos");
         router.refresh();
       }
     } catch {
@@ -73,14 +74,18 @@ export default function LoginPage() {
         <Space orientation="vertical" className="w-full text-center" size="large">
           <div>
             <div className="flex justify-center mb-2">
-              <div className="w-16 h-16 rounded-full bg-green-600 flex items-center justify-center text-white text-2xl font-bold shadow-lg">
-                B
-              </div>
+              <Image
+                src="/logo.png"
+                alt="Abukhayr Café logo"
+                width={64}
+                height={64}
+                className="w-16 h-16 rounded-full object-cover shadow-lg"
+              />
             </div>
             <Title level={3} className="mb-0!">
-              Baraka POS
+              Abukhayr Café
             </Title>
-            <Text type="secondary">Sign in to continue</Text>
+            <Text type="secondary">Staff sign in</Text>
           </div>
 
           {error && (
