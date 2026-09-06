@@ -147,6 +147,9 @@ export default function POSPage() {
   >({});
   const [loadingCreditOrdersKey, setLoadingCreditOrdersKey] =
     useState<CreditKey | null>(null);
+  const [creditNoteDrafts, setCreditNoteDrafts] = useState<
+    Record<number, string>
+  >({});
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [checkoutTabKey, setCheckoutTabKey] = useState<"checkout" | "details">(
     "checkout",
@@ -204,7 +207,7 @@ export default function POSPage() {
 
   const fetchRecentOrders = useCallback(async () => {
     setLoadingOrders(true);
-    const res = await fetch("/api/sales?limit=200");
+    const res = await fetch("/api/sales?limit=120");
     if (res.ok) {
       const data = await res.json();
       setRecentOrders((data.sales ?? []).map(normalizeSale));
@@ -225,7 +228,7 @@ export default function POSPage() {
   const fetchCustomerCreditOrders = useCallback(async (key: CreditKey) => {
     setLoadingCreditOrdersKey(key);
     const res = await fetch(
-      `/api/sales?status=unpaid&customer_id=${key}&limit=500`,
+      `/api/sales?status=unpaid&customer_id=${key}&limit=200`,
     );
     if (res.ok) {
       const data = await res.json();
@@ -488,11 +491,15 @@ export default function POSPage() {
     message.success("Customer created");
   };
 
-  const markOrderPaid = async (id: number) => {
+  const markOrderPaid = async (id: number, notes?: string) => {
     const res = await fetch(`/api/sales/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ payment_status: "paid" }),
+      body: JSON.stringify(
+        notes !== undefined
+          ? { payment_status: "paid", notes }
+          : { payment_status: "paid" },
+      ),
     });
 
     if (!res.ok) {
@@ -502,6 +509,11 @@ export default function POSPage() {
     }
 
     message.success("Order marked as paid");
+    setCreditNoteDrafts((prev) => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
     await fetchRecentOrders();
     await fetchOrderDetails(id);
     await fetchCreditGroups();
@@ -703,7 +715,11 @@ export default function POSPage() {
     fetchRecentOrders,
   ]);
 
-  const renderOrderItem = (order: Sale, inMobileDrawer = false) => {
+  const renderOrderItem = (
+    order: Sale,
+    inMobileDrawer = false,
+    enforceCreditRules = false,
+  ) => {
     const customer = order.customer_id
       ? customerById.get(order.customer_id)
       : undefined;
@@ -720,6 +736,9 @@ export default function POSPage() {
     const rowClassName = isPaid
       ? "border-emerald-300 bg-emerald-50/45"
       : "border-amber-300 bg-amber-50/55";
+    const existingNote = orderDetailsById[order.id]?.notes?.trim() ?? "";
+    const draftNote = creditNoteDrafts[order.id] ?? existingNote;
+    const hasNote = draftNote.trim().length > 0;
 
     return (
       <div
@@ -799,9 +818,18 @@ export default function POSPage() {
                       size="small"
                       type="primary"
                       loading={isSavingItems}
+                      disabled={enforceCreditRules && !hasNote}
+                      title={
+                        enforceCreditRules && !hasNote
+                          ? "Add a note/remark before marking this order as paid"
+                          : undefined
+                      }
                       onClick={(event) => {
                         event.stopPropagation();
-                        void markOrderPaid(order.id);
+                        void markOrderPaid(
+                          order.id,
+                          enforceCreditRules ? draftNote.trim() : undefined,
+                        );
                       }}
                     >
                       Mark as paid
@@ -833,7 +861,7 @@ export default function POSPage() {
                       Reopen
                     </Button>
                   ) : null}
-                  {detail.payment_status === "unpaid" ? (
+                  {detail.payment_status === "unpaid" && !enforceCreditRules ? (
                     <Popconfirm
                       title="Cancel this order?"
                       description="This will permanently delete the order."
@@ -865,7 +893,22 @@ export default function POSPage() {
                   </Button>
                 </div>
 
-                {detail.notes?.trim() ? (
+                {enforceCreditRules && detail.payment_status === "unpaid" ? (
+                  <div className="mb-2">
+                    <Input.TextArea
+                      value={creditNoteDrafts[order.id] ?? existingNote}
+                      placeholder="Add a note/remark before marking this order as paid"
+                      autoSize={{ minRows: 1, maxRows: 3 }}
+                      onClick={(event) => event.stopPropagation()}
+                      onChange={(event) =>
+                        setCreditNoteDrafts((prev) => ({
+                          ...prev,
+                          [order.id]: event.target.value,
+                        }))
+                      }
+                    />
+                  </div>
+                ) : detail.notes?.trim() ? (
                   <div className="mb-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2">
                     <Text className="block text-sm text-amber-900">
                       <Text strong>Note:</Text> {detail.notes.trim()}
@@ -1328,7 +1371,9 @@ export default function POSPage() {
                           image={Empty.PRESENTED_IMAGE_SIMPLE}
                         />
                       ) : (
-                        orders.map((order) => renderOrderItem(order, true))
+                        orders.map((order) =>
+                          renderOrderItem(order, true, true),
+                        )
                       )}
                     </div>
                   ) : null}

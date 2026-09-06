@@ -29,7 +29,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   const { id } = await params;
   const saleId = Number(id);
   const body = await request.json();
-  const { payment_status, is_done, items } = body as {
+  const { payment_status, is_done, items, notes } = body as {
     payment_status?: "paid" | "unpaid";
     is_done?: boolean;
     items?: Array<{
@@ -38,6 +38,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       quantity: number;
       unit_price_usd: number;
     }>;
+    notes?: string;
   };
 
   if (items !== undefined) {
@@ -138,16 +139,17 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
   const hasPaymentStatus = payment_status === "paid" || payment_status === "unpaid";
   const hasIsDone = typeof is_done === "boolean";
+  const hasNotes = typeof notes === "string";
 
-  if (!hasPaymentStatus && !hasIsDone) {
+  if (!hasPaymentStatus && !hasIsDone && !hasNotes) {
     return Response.json(
-      { error: "Invalid payload: provide payment_status and/or is_done" },
+      { error: "Invalid payload: provide payment_status, is_done and/or notes" },
       { status: 400 }
     );
   }
 
   const { rows: currentSaleRows } = await db.execute({
-    sql: "SELECT id, payment_status, is_done FROM sales WHERE id = ?",
+    sql: "SELECT id, payment_status, is_done, notes FROM sales WHERE id = ?",
     args: [saleId],
   });
 
@@ -159,9 +161,11 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   const currentPaymentStatus =
     (currentSale.payment_status as "paid" | "unpaid") ?? "paid";
   const currentIsDone = Boolean(Number(currentSale.is_done ?? 0));
+  const currentNotes = (currentSale.notes as string | null) ?? "";
 
   const nextPaymentStatus = hasPaymentStatus ? payment_status : currentPaymentStatus;
   const nextIsDone = hasIsDone ? is_done : currentIsDone;
+  const nextNotes = hasNotes ? notes.trim() : currentNotes;
 
   if (nextIsDone && nextPaymentStatus !== "paid") {
     return Response.json(
@@ -171,8 +175,8 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   }
 
   const { rows } = await db.execute({
-    sql: "UPDATE sales SET payment_status = ?, is_done = ? WHERE id = ? RETURNING id",
-    args: [nextPaymentStatus, nextIsDone ? 1 : 0, saleId],
+    sql: "UPDATE sales SET payment_status = ?, is_done = ?, notes = ? WHERE id = ? RETURNING id",
+    args: [nextPaymentStatus, nextIsDone ? 1 : 0, nextNotes || null, saleId],
   });
 
   if (rows.length === 0) return Response.json({ error: "Not found" }, { status: 404 });
